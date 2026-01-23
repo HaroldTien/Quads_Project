@@ -1,24 +1,25 @@
 ############################################################################
 #
-# CMakeLists.txt for building and integrating custom drone_dev
-# model and airframes into PX4-Autopilot for Gazebo simulation
+# CMakeLists.txt for building and uploading PX4 firmware to Pixhawk 6C
+# Uses existing QAV250 airframe (4052_holybro_qav250) in PX4
 #
 # This will:
-#   1. Copy custom model to PX4's Gazebo models directory
-#   2. Copy custom airframe to PX4's ROMFS airframes directory
-#   3. Set up build targets for easy installation
+#   1. Build PX4 firmware for Pixhawk 6C (px4_fmu-v6c_default)
+#   2. Upload firmware to flight controller via USB
 #
 # Usage:
 #   cd /home/harold/Projects/Quads_Project/drone_dev
 #   cmake -B build
-#   cmake --build build --target install_all
-#   cd ../PX4-Autopilot
-#   make px4_sitl 4052_gz_qav250
+#   cd build
+#   make uploadtofc     # Build and upload to Pixhawk 6C
+#
+# Note: The QAV250 airframe (4052_holybro_qav250) already exists in PX4,
+#       so we don't need to copy any custom files.
 #
 ############################################################################
 
 cmake_minimum_required(VERSION 3.16)
-project(drone_dev)
+project(drone_dev_hardware)
 
 # Get absolute paths
 get_filename_component(DRONE_DEV_DIR ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
@@ -29,72 +30,11 @@ if(NOT EXISTS "${PX4_DIR}")
     message(FATAL_ERROR "PX4-Autopilot directory not found at: ${PX4_DIR}")
 endif()
 
-# Custom paths
-set(CUSTOM_MODEL_DIR "${DRONE_DEV_DIR}/model")
-set(CUSTOM_AIRFRAME_DIR "${DRONE_DEV_DIR}/airframes")
-# Model name must match what PX4 extracts from airframe filename (4052_gz_qav250 -> qav250)
-# PX4 sets PX4_SIM_MODEL=gz_qav250, and Gazebo looks for "qav250" directory (without gz_ prefix)
-set(CUSTOM_MODEL_NAME "qav250")
-set(CUSTOM_AIRFRAME_SOURCE "4052_holybro_qav250.sh")
-set(CUSTOM_AIRFRAME_DEST "4052_gz_qav250")
-
-# PX4 paths
-set(PX4_AIRFRAME_DIR "${PX4_DIR}/ROMFS/px4fmu_common/init.d-posix/airframes")
-set(PX4_MODEL_DIR "${PX4_DIR}/Tools/simulation/gz/models")
-set(PX4_BUILD_DIR "${PX4_DIR}/build/px4_sitl_default")
-
-# Verify custom files exist
-if(NOT EXISTS "${CUSTOM_MODEL_DIR}/model.sdf")
-    message(WARNING "Model file not found: ${CUSTOM_MODEL_DIR}/model.sdf")
-endif()
-
-if(NOT EXISTS "${CUSTOM_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_SOURCE}")
-    message(WARNING "Airframe file not found: ${CUSTOM_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_SOURCE}")
-endif()
-
+# PX4 configuration
+set(PX4_BOARD_TARGET "px4_fmu-v6c_default")
 
 ############################################################################
-# Setup: Copy/Link custom files to PX4 directories
-############################################################################
-
-# Function to copy airframe file to PX4
-add_custom_target(setup_airframe
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${PX4_AIRFRAME_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CUSTOM_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_SOURCE}"
-        "${PX4_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_DEST}"
-    COMMAND chmod 755 "${PX4_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_DEST}"
-    COMMENT "Copying airframe file to PX4"
-    VERBATIM
-)
-
-# Function to copy model directory to PX4
-add_custom_target(setup_model
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${PX4_MODEL_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CUSTOM_MODEL_DIR}"
-        "${PX4_MODEL_DIR}/${CUSTOM_MODEL_NAME}"
-    COMMENT "Copying model directory to PX4"
-    VERBATIM
-)
-
-# Clean PX4 build directory if it exists (to force reconfiguration with new airframe)
-# This ensures PX4's build system will rescan and recognize the new airframe
-# Using rm -rf which won't fail if directory doesn't exist
-add_custom_target(clean_px4_for_reconfig
-    COMMAND rm -rf "${PX4_BUILD_DIR}"
-    COMMENT "Cleaning PX4 build to force reconfiguration with new airframe"
-    DEPENDS setup_airframe
-)
-
-# Combined setup target
-add_custom_target(setup
-    DEPENDS setup_airframe setup_model clean_px4_for_reconfig
-    COMMENT "Setting up custom model and airframe in PX4"
-)
-
-############################################################################
-# Build PX4 Firmware
+# Build and Upload Targets
 ############################################################################
 
 # Find make command
@@ -103,48 +43,40 @@ if(NOT MAKE_COMMAND)
     message(FATAL_ERROR "make command not found. Please install make.")
 endif()
 
-# Extract model name from airframe filename (e.g., 4052_gz_qav250 -> qav250)
-# This matches PX4's CMakeLists.txt logic: string(REGEX REPLACE ".*_gz_" "" model_name ${gz_airframe})
-set(AIRFRAME_MODEL_NAME "qav250")
-
-# Build PX4 SITL (only build, don't run)
-add_custom_target(build_px4
-    COMMAND ${MAKE_COMMAND} -C "${PX4_DIR}" px4_sitl gz_${AIRFRAME_MODEL_NAME}
+# Build PX4 firmware for Pixhawk 6C (no upload)
+add_custom_target(build_fw
+    COMMAND ${MAKE_COMMAND} -C "${PX4_DIR}" ${PX4_BOARD_TARGET}
     WORKING_DIRECTORY "${PX4_DIR}"
-    DEPENDS setup
-    COMMENT "Building PX4 SITL firmware (without running simulation)"
+    COMMENT "Building PX4 firmware for Pixhawk 6C (${PX4_BOARD_TARGET})"
+    USES_TERMINAL
+)
+
+# Upload firmware to Pixhawk 6C via USB
+# Note: Make sure your Pixhawk 6C is connected via USB before running this
+add_custom_target(uploadtofc
+    COMMAND ${MAKE_COMMAND} -C "${PX4_DIR}" ${PX4_BOARD_TARGET} upload
+    WORKING_DIRECTORY "${PX4_DIR}"
+    COMMENT "Building and uploading PX4 firmware to Pixhawk 6C"
+    USES_TERMINAL
+)
+
+# Force upload (bypasses some checks)
+add_custom_target(force_upload
+    COMMAND ${MAKE_COMMAND} -C "${PX4_DIR}" ${PX4_BOARD_TARGET} force-upload
+    WORKING_DIRECTORY "${PX4_DIR}"
+    COMMENT "Force uploading PX4 firmware to Pixhawk 6C"
     USES_TERMINAL
 )
 
 ############################################################################
-# Run Simulation
+# Clean target
 ############################################################################
-
-# Run simulation with custom model
-# Note: PX4 generates targets as gz_<model_name> where model_name is extracted
-# from the airframe filename by removing everything before and including "_gz_"
-add_custom_target(run_simulation
-    COMMAND ${MAKE_COMMAND} -C "${PX4_DIR}" px4_sitl gz_${AIRFRAME_MODEL_NAME}
-    WORKING_DIRECTORY "${PX4_DIR}"
-    DEPENDS setup
-    COMMENT "Installing files, building PX4, and starting Gazebo simulation"
-    USES_TERMINAL
-)
-
-
-############################################################################
-# Clean targets
-############################################################################
-
-add_custom_target(clean_setup
-    COMMAND ${CMAKE_COMMAND} -E remove "${PX4_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_DEST}"
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${PX4_MODEL_DIR}/${CUSTOM_MODEL_NAME}"
-    COMMENT "Cleaning up custom files from PX4"
-)
 
 add_custom_target(clean_px4
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${PX4_BUILD_DIR}"
+    COMMAND ${MAKE_COMMAND} -C "${PX4_DIR}" distclean
+    WORKING_DIRECTORY "${PX4_DIR}"
     COMMENT "Cleaning PX4 build directory"
+    USES_TERMINAL
 )
 
 ############################################################################
@@ -152,18 +84,21 @@ add_custom_target(clean_px4
 ############################################################################
 
 message(STATUS "==========================================")
-message(STATUS "Drone Development Environment Setup")
+message(STATUS "PX4 Hardware Build Setup (Pixhawk 6C)")
 message(STATUS "==========================================")
 message(STATUS "DRONE_DEV_DIR: ${DRONE_DEV_DIR}")
 message(STATUS "PX4_DIR: ${PX4_DIR}")
-message(STATUS "Custom Model: ${CUSTOM_MODEL_DIR} -> ${PX4_MODEL_DIR}/${CUSTOM_MODEL_NAME}")
-message(STATUS "Custom Airframe: ${CUSTOM_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_SOURCE} -> ${PX4_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_DEST}")
+message(STATUS "Board Target: ${PX4_BOARD_TARGET}")
+message(STATUS "Airframe: 4052_holybro_qav250 (already in PX4)")
 message(STATUS "")
 message(STATUS "Available targets:")
-message(STATUS "  make setup          - Copy custom files to PX4")
-message(STATUS "  make build_px4      - Build PX4 firmware")
-message(STATUS "  make run_simulation - Build and run simulation")
-message(STATUS "  make clean_setup    - Remove custom files from PX4")
-message(STATUS "  make clean_px4      - Clean PX4 build")
+message(STATUS "  make build_fw     - Build firmware (no upload)")
+message(STATUS "  make uploadtofc   - Build and upload to Pixhawk 6C")
+message(STATUS "  make force_upload - Force upload (if normal upload fails)")
+message(STATUS "  make clean_px4    - Clean PX4 build")
+message(STATUS "")
+message(STATUS "IMPORTANT:")
+message(STATUS "  1. Connect Pixhawk 6C via USB before running 'make uploadtofc'")
+message(STATUS "  2. The airframe ID is 4052 (use SYS_AUTOSTART=4052 in QGC)")
+message(STATUS "  3. Airframe 4052_holybro_qav250 is already included in PX4")
 message(STATUS "==========================================")
-

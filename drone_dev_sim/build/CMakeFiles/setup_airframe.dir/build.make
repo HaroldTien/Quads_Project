@@ -69,7 +69,7 @@ include CMakeFiles/setup_airframe.dir/progress.make
 CMakeFiles/setup_airframe:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Copying airframe file to PX4"
 	/usr/bin/cmake -E make_directory /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes
-	/usr/bin/cmake -E copy_if_different /home/harold/Projects/Quads_Project/drone_dev/airframes/4052_holybro_qav250.sh /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250
+	/usr/bin/cmake -E copy_if_different /home/harold/Projects/Quads_Project/drone_dev/airframes/4052_holybro_qav250_sim.sh /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250
 	chmod 755 /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250
 
 setup_airframe: CMakeFiles/setup_airframe

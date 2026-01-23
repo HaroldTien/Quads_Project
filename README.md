@@ -1,23 +1,37 @@
 # Quads Project
 
-This project integrates a custom QAV250 quadcopter model and airframe configuration into PX4-Autopilot for Gazebo simulation.
+This project contains PX4-Autopilot configurations for the QAV250 quadcopter, supporting both real flight hardware (Pixhawk 6C) and Gazebo simulation.
 
 ## Project Structure
 
 ```
 Quads_Project/
 ├── PX4-Autopilot/          # PX4 Autopilot firmware (gitignored)
-├── drone_dev/              # Custom development files
+├── drone_dev/              # Hardware flight configuration
+│   ├── airframe/           # Hardware airframe configuration
+│   │   └── 4052_holybro_qav250  # QAV250 hardware airframe
+│   └── CMakeLists.txt      # Build system for Pixhawk 6C
+├── drone_dev_sim/          # Simulation configuration
 │   ├── model/              # Custom Gazebo model for QAV250
 │   │   ├── model.sdf       # Gazebo model definition
 │   │   └── model.config    # Model metadata
-│   ├── airframes/          # Custom airframe configurations
-│   │   └── 4052_holybro_qav250.sh  # QAV250 airframe script
-│   └── CMakeLists.txt      # Build system for integration
+│   ├── airframes/          # Simulation airframe configurations
+│   │   └── 4052_holybro_qav250_sim.sh  # QAV250 simulation airframe
+│   └── CMakeLists.txt      # Build system for Gazebo simulation
 └── README.md               # This file
 ```
 
-### 1. Custom Airframe Creation
+### 1. Hardware Flight Configuration (`drone_dev/`)
+
+Configured for real flight with Pixhawk 6C flight controller:
+
+- **Airframe**: `4052_holybro_qav250` (HolyBro QAV250 - already included in PX4)
+- **Board target**: `px4_fmu-v6c_default` (Pixhawk 6C)
+- **Note**: No custom files needed - uses standard PX4 airframe
+
+The `4052_holybro_qav250` airframe is already part of PX4-Autopilot, so no copying is required.
+
+### 2. Simulation Configuration (`drone_dev_sim/`)
 
 Created a custom Gazebo simulation airframe (`4052_gz_qav250`) that combines:
 
@@ -25,15 +39,15 @@ Created a custom Gazebo simulation airframe (`4052_gz_qav250`) that combines:
 - **Gazebo simulation settings** from `4006_gz_px4vision` (Gazebo simulation configuration)
 
 The airframe file is located at:
-- Source: `drone_dev/airframes/4052_holybro_qav250.sh`
+- Source: `drone_dev_sim/airframes/4052_holybro_qav250_sim.sh`
 - Destination: `PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250`
 
-### 2. Custom Gazebo Model
+### 3. Custom Gazebo Model (Simulation Only)
 
 Created a custom Gazebo model for QAV250 based on the PX4Vision model:
 
 - Model name: `qav250`
-- Location: `drone_dev/model/`
+- Location: `drone_dev_sim/model/`
 - Copied to: `PX4-Autopilot/Tools/simulation/gz/models/qav250/`
 
 The model includes:
@@ -41,13 +55,20 @@ The model includes:
 - Visual representation using PX4Vision mesh
 - Sensor configurations (air pressure, magnetometer, IMU, etc.)
 
-### 3. Build System Integration
+### 4. Build System Integration
 
-Created a CMake build system (`drone_dev/CMakeLists.txt`) that:
+Created CMake build systems for both hardware and simulation:
 
+#### Hardware (`drone_dev/CMakeLists.txt`):
+- **Builds firmware** for Pixhawk 6C (`px4_fmu-v6c_default`)
+- **Uploads firmware** to flight controller via USB
+- Uses existing PX4 airframe (no file copying needed)
+
+#### Simulation (`drone_dev_sim/CMakeLists.txt`):
 - **Automatically copies** custom model and airframe to PX4 directories
 - **Forces PX4 reconfiguration** when new airframes are added
 - **Provides convenient targets** for building and running simulations
+- Custom files needed because QAV250 doesn't exist in Gazebo sim
 
 ### 4. Key Fixes
 
@@ -62,17 +83,53 @@ Created a CMake build system (`drone_dev/CMakeLists.txt`) that:
 
 ## Usage
 
-### Initial Setup
+### Option A: Hardware Flight (Pixhawk 6C)
+
+#### Initial Setup
 
 ```bash
 cd /home/harold/Projects/Quads_Project/drone_dev
 cmake -B build
+cd build
 ```
 
-### Run Simulation
+#### Upload Firmware to Pixhawk 6C
 
 ```bash
-cd /home/harold/Projects/Quads_Project/drone_dev/build
+# Make sure Pixhawk 6C is connected via USB first!
+make uploadtofc
+```
+
+This will:
+1. Build PX4 firmware for Pixhawk 6C
+2. Upload firmware to flight controller
+
+#### Available Targets (Hardware)
+
+- `make build_fw` - Build firmware only (no upload)
+- `make uploadtofc` - Build and upload to Pixhawk 6C ⭐
+- `make force_upload` - Force upload (if normal upload fails)
+- `make clean_px4` - Clean PX4 build
+
+**Important Notes:**
+- Airframe ID is **4052** (set `SYS_AUTOSTART=4052` in QGroundControl)
+- The `4052_holybro_qav250` airframe is already included in PX4
+- Connect Pixhawk 6C via USB before running `make uploadtofc`
+- Use `force_upload` if normal upload fails
+
+### Option B: Simulation (Gazebo)
+
+#### Initial Setup
+
+```bash
+cd /home/harold/Projects/Quads_Project/drone_dev_sim
+cmake -B build
+```
+
+#### Run Simulation
+
+```bash
+cd /home/harold/Projects/Quads_Project/drone_dev_sim/build
 make run_simulation
 ```
 
@@ -82,7 +139,7 @@ This will:
 3. Build PX4 SITL firmware
 4. Launch Gazebo simulation with the custom QAV250 model
 
-### Available Targets
+#### Available Targets (Simulation)
 
 - `make setup` - Copy custom files to PX4
 - `make build_px4` - Build PX4 firmware only (don't run)
@@ -109,10 +166,16 @@ This will:
 
 ### File Locations
 
+#### Hardware Flight Files
+
+No custom files required - uses standard PX4 airframe `4052_holybro_qav250` already in PX4-Autopilot.
+
+#### Simulation Files
+
 | Component | Source | Destination |
 |-----------|--------|-------------|
-| Airframe | `drone_dev/airframes/4052_holybro_qav250.sh` | `PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250` |
-| Model | `drone_dev/model/` | `PX4-Autopilot/Tools/simulation/gz/models/qav250/` |
+| Airframe | `drone_dev_sim/airframes/4052_holybro_qav250_sim.sh` | `PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250` |
+| Model | `drone_dev_sim/model/` | `PX4-Autopilot/Tools/simulation/gz/models/qav250/` |
 
 ## Notes
 
