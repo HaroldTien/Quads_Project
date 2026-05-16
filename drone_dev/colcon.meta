@@ -1,0 +1,10 @@
+{
+  "names": {
+    "colcon-core": {
+      "base-paths": ["src"]
+    }
+  },
+  "args": {
+    "colcon-core": ["--base-paths", "src"]
+  }
+}

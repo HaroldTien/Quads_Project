@@ -1,0 +1,39 @@
+# ROS 2 / colcon build artifacts
+build/
+install/
+log/
+
+# Python bytecode and caches
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Test and coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
+
+# Local environments
+.env
+.venv/
+venv/
+env/
+
+# IDE/editor settings
+.vscode/
+.idea/
+
+# OS and temporary files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Keys and certificates (keep private material out of git)
+*.key
+*.pem
+*.p12
+*.pfx

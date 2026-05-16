@@ -1,0 +1,7 @@
+csi_camera_node:
+  ros__parameters:
+    device: /dev/video0
+    width: 1280
+    height: 800
+    fps: 30
+
