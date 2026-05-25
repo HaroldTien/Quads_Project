@@ -1,0 +1,20 @@
+[0.037s] Invoking command in '/home/harold/Workspace/Quads_Project/build/drone_dev_hardware': /usr/bin/cmake /home/harold/Workspace/Quads_Project/drone_dev -DCMAKE_INSTALL_PREFIX=/home/harold/Workspace/Quads_Project/install/drone_dev_hardware
+[2.785s] -- The C compiler identification is GNU 11.4.0
+[3.213s] -- The CXX compiler identification is GNU 11.4.0
+[3.244s] -- Detecting C compiler ABI info
+[3.389s] -- Detecting C compiler ABI info - done
+[3.415s] -- Check for working C compiler: /usr/bin/cc - skipped
+[3.419s] -- Detecting C compile features
+[3.421s] -- Detecting C compile features - done
+[3.435s] -- Detecting CXX compiler ABI info
+[3.588s] -- Detecting CXX compiler ABI info - done
+[3.617s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[3.618s] -- Detecting CXX compile features
+[3.620s] -- Detecting CXX compile features - done
+[3.624s] [31mCMake Error at CMakeLists.txt:30 (message):
+[3.625s]   PX4-Autopilot directory not found at:
+[3.626s]   /home/harold/Workspace/Quads_Project/PX4-Autopilot
+[3.627s] 
+[3.627s] [0m
+[3.627s] -- Configuring incomplete, errors occurred!
+[3.628s] See also "/home/harold/Workspace/Quads_Project/build/drone_dev_hardware/CMakeFiles/CMakeOutput.log".

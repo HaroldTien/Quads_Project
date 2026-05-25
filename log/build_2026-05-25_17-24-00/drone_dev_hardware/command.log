@@ -1,0 +1,1 @@
+Invoking command in '/home/harold/Workspace/Quads_Project/build/drone_dev_hardware': /usr/bin/cmake /home/harold/Workspace/Quads_Project/drone_dev -DCMAKE_INSTALL_PREFIX=/home/harold/Workspace/Quads_Project/install/drone_dev_hardware

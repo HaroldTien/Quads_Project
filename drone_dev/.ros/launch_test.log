@@ -1,0 +1,30 @@
+[INFO] [launch]: All log files can be found below /home/harold/Workspace/Quads_Project/drone_dev/.ros/log/2026-05-25-16-49-01-575942-harold-desktop-13295
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [csi_camera_node-1]: process started with pid [13296]
+[csi_camera_node-1] [INFO] [1779684542.677702466] [csi_camera_node]: Camera matrix: [[702.64838873   0.         628.73132891]
+[csi_camera_node-1]  [  0.         700.66652284 404.45041083]
+[csi_camera_node-1]  [  0.           0.           1.        ]]
+[csi_camera_node-1] NvRmMemInitNvmap failed with No such file or directory
+[csi_camera_node-1] 356: Memory Manager Not supported
+[csi_camera_node-1] 
+[csi_camera_node-1] 
+[csi_camera_node-1] 
+[csi_camera_node-1] ****NvRmMemMgrInit failed**** error type: 196626
+[csi_camera_node-1] 
+[csi_camera_node-1] 
+[csi_camera_node-1] libnvrm_gpu.so: NvRmGpuLibOpen failed, error=196626
+[csi_camera_node-1] nvbufsurftransform: Could not get EGL display connection
+[csi_camera_node-1] [ WARN:0@0.286] global cap_gstreamer.cpp:2847 handleMessage OpenCV | GStreamer warning: Embedded video playback halted; module nvv4l2camerasrc0 reported: GStreamer error: state change failed and some element failed to post a proper error message with the reason for the failure.
+[csi_camera_node-1] [ WARN:0@0.287] global cap_gstreamer.cpp:1697 open OpenCV | GStreamer warning: unable to start pipeline
+[csi_camera_node-1] [ WARN:0@0.287] global cap_gstreamer.cpp:1172 isPipelinePlaying OpenCV | GStreamer warning: GStreamer: pipeline have not been created
+[csi_camera_node-1] [ WARN:0@0.287] global cap.cpp:212 open VIDEOIO(GSTREAMER): backend is generally available but can't be used to capture by name
+[csi_camera_node-1] [ERROR] [1779684542.825508234] [csi_camera_node]: Failed to open camera -  check pipeline and /dev/video0
+[csi_camera_node-1] Traceback (most recent call last):
+[csi_camera_node-1]   File "/home/harold/Workspace/Quads_Project/drone_dev/install/csi_camera_publisher/lib/csi_camera_publisher/csi_camera_node", line 33, in <module>
+[csi_camera_node-1]     sys.exit(load_entry_point('csi-camera-publisher', 'console_scripts', 'csi_camera_node')())
+[csi_camera_node-1]   File "/home/harold/Workspace/Quads_Project/drone_dev/build/csi_camera_publisher/csi_camera_publisher/csi_camera_node.py", line 151, in main
+[csi_camera_node-1]     node = CsiCameraNode()
+[csi_camera_node-1]   File "/home/harold/Workspace/Quads_Project/drone_dev/build/csi_camera_publisher/csi_camera_publisher/csi_camera_node.py", line 81, in __init__
+[csi_camera_node-1]     raise  RuntimeError('Failed to open camera')
+[csi_camera_node-1] RuntimeError: Failed to open camera
+[ERROR] [csi_camera_node-1]: process has died [pid 13296, exit code 1, cmd '/home/harold/Workspace/Quads_Project/drone_dev/install/csi_camera_publisher/lib/csi_camera_publisher/csi_camera_node --ros-args -r __node:=csi_camera_node --params-file /home/harold/Workspace/Quads_Project/drone_dev/install/csi_camera_publisher/share/csi_camera_publisher/config/camera_params.yaml'].
