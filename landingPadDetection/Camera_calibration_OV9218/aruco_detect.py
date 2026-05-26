@@ -1,6 +1,7 @@
 import cv2
 import cv2.aruco as aruco
 import numpy as np
+import sys
 import time
 from pathlib import Path
 
@@ -33,7 +34,12 @@ def load_calibration(base_dir: Path):
 
 
 def open_camera():
-    cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_V4L2)
+    if sys.platform == "darwin":
+        print("macOS detected: using default OpenCV camera backend.")
+        cap = cv2.VideoCapture(CAMERA_INDEX)
+    else:
+        cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_V4L2)
+
     if not cap.isOpened():
         return None
 
@@ -41,7 +47,7 @@ def open_camera():
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
     cap.set(cv2.CAP_PROP_FPS, FPS)
 
-    # Warm-up frames for Jetson + V4L2 stability.
+    # Warm-up frames for stability.
     for _ in range(40):
         ret, _ = cap.read()
         if ret:
@@ -58,8 +64,9 @@ def main():
 
     cap = open_camera()
     if cap is None:
-        print("ERROR: Cannot open camera or receive frames from /dev/video0.")
-        print("Check Jetvariety driver, cable, and camera usage by other apps.")
+        print("ERROR: Cannot open camera or receive frames.")
+        print("On macOS this uses the default OpenCV backend; on Jetson it uses /dev/video0 with V4L2.")
+        print("Check that your camera is connected and not in use by another app.")
         raise SystemExit(1)
 
     aruco_dict_id = getattr(aruco, ARUCO_DICT_NAME, None)
