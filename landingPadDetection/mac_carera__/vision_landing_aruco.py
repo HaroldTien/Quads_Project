@@ -3,6 +3,7 @@ import cv2.aruco as aruco
 import numpy as np
 import sys
 import time
+import os
 from pathlib import Path
 
 
@@ -34,10 +35,16 @@ def load_calibration(base_dir: Path):
     dist_coeffs_path = base_dir / "dist_coeffs.npy"
 
     if not camera_matrix_path.exists() or not dist_coeffs_path.exists():
-        raise FileNotFoundError(
-            "Missing calibration files. Expected 'camera_matrix.npy' and "
-            "'dist_coeffs.npy' in the script directory."
-        )
+        # Fallback to the OV9218 calibration folder if not found locally
+        alt_dir = base_dir.parent / "Camera_calibration_OV9218"
+        camera_matrix_path = alt_dir / "camera_matrix.npy"
+        dist_coeffs_path = alt_dir / "dist_coeffs.npy"
+
+        if not camera_matrix_path.exists() or not dist_coeffs_path.exists():
+            raise FileNotFoundError(
+                "Missing calibration files. Expected 'camera_matrix.npy' and "
+                "'dist_coeffs.npy' in the script directory or Camera_calibration_OV9218."
+            )
 
     camera_matrix = np.load(str(camera_matrix_path))
     dist_coeffs = np.load(str(dist_coeffs_path))
@@ -220,7 +227,8 @@ def main():
 
         # Show CLAHE-enhanced feed in a second window for debugging
         # Comment out the line below when not needed
-        cv2.imshow("CLAHE preview (low-light debug)", gray_clahe)
+        if os.environ.get("DISPLAY"):
+            cv2.imshow("CLAHE preview (low-light debug)", gray_clahe)
 
         cv2.putText(
             frame,
@@ -232,13 +240,18 @@ def main():
             2,
             cv2.LINE_AA,
         )
-        cv2.imshow("OV9218 ArUco Detection", frame)
-
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        
+        if os.environ.get("DISPLAY"):
+            cv2.imshow("OV9218 ArUco Detection", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+        else:
+            # Headless mode: just yield to let other tasks run or sleep briefly
+            time.sleep(0.03)
 
     cap.release()
-    cv2.destroyAllWindows()
+    if os.environ.get("DISPLAY"):
+        cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
