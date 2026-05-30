@@ -1,0 +1,4 @@
+[0.000000] (-) TimerEvent: {}
+[0.000781] (-) JobUnselected: {'identifier': 'drone_dev_hardware'}
+[0.000959] (-) JobUnselected: {'identifier': 'drone_dev_sim'}
+[0.001334] (-) EventReactorShutdown: {}

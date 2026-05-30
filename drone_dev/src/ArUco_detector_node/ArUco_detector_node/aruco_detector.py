@@ -6,6 +6,43 @@ import cv2
 import numpy as np
 
 
+def rvec_to_quaternion(rvec: np.ndarray) -> Tuple[float, float, float, float]:
+    """Convert an OpenCV Rodrigues rotation vector to a (x, y, z, w) quaternion.
+
+    The output ordering matches geometry_msgs/Quaternion (x, y, z, w).
+    """
+    rotation_matrix, _ = cv2.Rodrigues(np.asarray(rvec, dtype=np.float64).reshape(3, 1))
+    r = rotation_matrix
+    trace = r[0, 0] + r[1, 1] + r[2, 2]
+
+    if trace > 0.0:
+        s = 0.5 / np.sqrt(trace + 1.0)
+        w = 0.25 / s
+        x = (r[2, 1] - r[1, 2]) * s
+        y = (r[0, 2] - r[2, 0]) * s
+        z = (r[1, 0] - r[0, 1]) * s
+    elif r[0, 0] > r[1, 1] and r[0, 0] > r[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + r[0, 0] - r[1, 1] - r[2, 2])
+        w = (r[2, 1] - r[1, 2]) / s
+        x = 0.25 * s
+        y = (r[0, 1] + r[1, 0]) / s
+        z = (r[0, 2] + r[2, 0]) / s
+    elif r[1, 1] > r[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + r[1, 1] - r[0, 0] - r[2, 2])
+        w = (r[0, 2] - r[2, 0]) / s
+        x = (r[0, 1] + r[1, 0]) / s
+        y = 0.25 * s
+        z = (r[1, 2] + r[2, 1]) / s
+    else:
+        s = 2.0 * np.sqrt(1.0 + r[2, 2] - r[0, 0] - r[1, 1])
+        w = (r[1, 0] - r[0, 1]) / s
+        x = (r[0, 2] + r[2, 0]) / s
+        y = (r[1, 2] + r[2, 1]) / s
+        z = 0.25 * s
+
+    return (float(x), float(y), float(z), float(w))
+
+
 class ArucoDetector:
     """Small helper class that wraps OpenCV ArUco detection + pose estimation."""
 

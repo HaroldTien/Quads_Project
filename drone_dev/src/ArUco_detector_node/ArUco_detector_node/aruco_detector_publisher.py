@@ -5,8 +5,9 @@ from rclpy.node import Node
 import numpy as np
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CameraInfo, Image
+from geometry_msgs.msg import PoseStamped
 
-from .aruco_detector import ArucoDetector
+from .aruco_detector import ArucoDetector, rvec_to_quaternion
 
 
 class ArucoDetectorNode(Node):
@@ -18,9 +19,11 @@ class ArucoDetectorNode(Node):
         self.declare_parameter("marker_length_m", 0.20)
         self.declare_parameter("dictionary_name", "DICT_5X5_250")
         self.declare_parameter("target_marker_id", 0)
+        self.declare_parameter("camera_frame_id", "camera_frame")
         marker_length_m = float(self.get_parameter("marker_length_m").value)
         dictionary_name = str(self.get_parameter("dictionary_name").value)
         self.target_marker_id = int(self.get_parameter("target_marker_id").value)
+        self.camera_frame_id = str(self.get_parameter("camera_frame_id").value)
 
         # ROS <-> OpenCV image conversion helper.
         self.bridge = CvBridge()
@@ -56,6 +59,9 @@ class ArucoDetectorNode(Node):
             10,
         )
 
+        # Publish the detected marker pose (position + orientation) in the camera frame.
+        self.pose_pub = self.create_publisher(PoseStamped, "/aruco/pose", 10)
+
     def camera_info_callback(self, msg: CameraInfo) -> None:
         # K is 3x3 flattened in row-major order.
         self.camera_matrix = np.array(msg.k, dtype=np.float64).reshape(3, 3)
@@ -88,10 +94,34 @@ class ArucoDetectorNode(Node):
         first_tvec = result["tvecs"][0].flatten().tolist()
         self.get_logger().info(f"Detected IDs: {ids_list} | first marker tvec(m): {first_tvec}")
 
+        # Build and publish the pose of the first (target) marker.
+        self.publish_pose(
+            msg.header.stamp,
+            result["rvecs"][0],
+            result["tvecs"][0],
+        )
 
+    def publish_pose(self, stamp, rvec: np.ndarray, tvec: np.ndarray) -> None:
+        # tvec is the marker position in the camera frame, in meters:
+        #   x = right, y = down, z = depth (distance in front of the camera).
+        tx, ty, tz = np.asarray(tvec, dtype=np.float64).flatten()
+        qx, qy, qz, qw = rvec_to_quaternion(rvec)
 
+        pose_msg = PoseStamped()
+        # Reuse the image timestamp so downstream consumers can sync with the frame.
+        pose_msg.header.stamp = stamp
+        pose_msg.header.frame_id = self.camera_frame_id
 
+        pose_msg.pose.position.x = tx
+        pose_msg.pose.position.y = ty
+        pose_msg.pose.position.z = tz
 
+        pose_msg.pose.orientation.x = qx
+        pose_msg.pose.orientation.y = qy
+        pose_msg.pose.orientation.z = qz
+        pose_msg.pose.orientation.w = qw
+
+        self.pose_pub.publish(pose_msg)
 
 
 

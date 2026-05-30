@@ -20,7 +20,7 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "aruco_detector_node = ArUco_detector_node.aruco_detector_node:main",
+            "aruco_detector_node = ArUco_detector_node.aruco_detector_publisher:main",
         ],
     },
 )

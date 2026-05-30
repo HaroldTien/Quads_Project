@@ -1,0 +1,9 @@
+[0.054s] Invoking command in '/home/harold/Workspace/Quads_Project/build/drone_dev_hardware': /usr/bin/cmake /home/harold/Workspace/Quads_Project/drone_dev -DCMAKE_INSTALL_PREFIX=/home/harold/Workspace/Quads_Project/install/drone_dev_hardware
+[1.277s] CMake Error at CMakeLists.txt:30 (message):
+[1.277s]   PX4-Autopilot directory not found at:
+[1.277s]   /home/harold/Workspace/Quads_Project/PX4-Autopilot
+[1.280s] 
+[1.281s] 
+[1.282s] -- Configuring incomplete, errors occurred!
+[1.283s] See also "/home/harold/Workspace/Quads_Project/build/drone_dev_hardware/CMakeFiles/CMakeOutput.log".
+[1.287s] Invoked command in '/home/harold/Workspace/Quads_Project/build/drone_dev_hardware' returned '1': /usr/bin/cmake /home/harold/Workspace/Quads_Project/drone_dev -DCMAKE_INSTALL_PREFIX=/home/harold/Workspace/Quads_Project/install/drone_dev_hardware

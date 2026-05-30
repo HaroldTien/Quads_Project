@@ -1,0 +1,7 @@
+CMake Error at CMakeLists.txt:29 (message):
+  PX4-Autopilot directory not found at:
+  /home/harold/Workspace/Quads_Project/PX4-Autopilot
+
+
+-- Configuring incomplete, errors occurred!
+See also "/home/harold/Workspace/Quads_Project/build/drone_dev_sim/CMakeFiles/CMakeOutput.log".

@@ -1,0 +1,9 @@
+[0.236s] Invoking command in '/home/harold/Workspace/Quads_Project/build/drone_dev_sim': /usr/bin/cmake /home/harold/Workspace/Quads_Project/drone_dev_sim -DCMAKE_INSTALL_PREFIX=/home/harold/Workspace/Quads_Project/install/drone_dev_sim
+[1.239s] CMake Error at CMakeLists.txt:29 (message):
+[1.240s]   PX4-Autopilot directory not found at:
+[1.240s]   /home/harold/Workspace/Quads_Project/PX4-Autopilot
+[1.240s] 
+[1.240s] 
+[1.248s] -- Configuring incomplete, errors occurred!
+[1.248s] See also "/home/harold/Workspace/Quads_Project/build/drone_dev_sim/CMakeFiles/CMakeOutput.log".
+[1.249s] Invoked command in '/home/harold/Workspace/Quads_Project/build/drone_dev_sim' returned '1': /usr/bin/cmake /home/harold/Workspace/Quads_Project/drone_dev_sim -DCMAKE_INSTALL_PREFIX=/home/harold/Workspace/Quads_Project/install/drone_dev_sim

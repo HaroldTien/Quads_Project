@@ -259,6 +259,8 @@ ros2 run aruco_detector_node aruco_detector_node \
 The detector logs the detected marker IDs and the first marker's translation
 vector in metres (camera frame).
 
+
+
 ### D. Calibrate a Camera with `landingPadDetection/`
 
 ```bash
