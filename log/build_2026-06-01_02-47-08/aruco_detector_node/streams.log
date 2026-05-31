@@ -1,0 +1,39 @@
+[2.182s] Invoking command in '/home/harold/Workspace/Quads_Project/build/aruco_detector_node': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/aruco_detector_node/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build
+[2.660s] running develop
+[2.963s] Removing /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages/aruco-detector-node.egg-link (link to .)
+[3.036s] Invoked command in '/home/harold/Workspace/Quads_Project/build/aruco_detector_node' returned '0': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/aruco_detector_node/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build
+[3.039s] Invoking command in '/home/harold/Workspace/Quads_Project/drone_dev/src/ArUco_detector_node': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/aruco_detector_node/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/aruco_detector_node build --build-base /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build install --record /home/harold/Workspace/Quads_Project/build/aruco_detector_node/install.log --single-version-externally-managed install_data --force
+[3.501s] running egg_info
+[3.502s] writing ../../../build/aruco_detector_node/aruco_detector_node.egg-info/PKG-INFO
+[3.503s] writing dependency_links to ../../../build/aruco_detector_node/aruco_detector_node.egg-info/dependency_links.txt
+[3.503s] writing entry points to ../../../build/aruco_detector_node/aruco_detector_node.egg-info/entry_points.txt
+[3.504s] writing requirements to ../../../build/aruco_detector_node/aruco_detector_node.egg-info/requires.txt
+[3.504s] writing top-level names to ../../../build/aruco_detector_node/aruco_detector_node.egg-info/top_level.txt
+[3.507s] reading manifest file '../../../build/aruco_detector_node/aruco_detector_node.egg-info/SOURCES.txt'
+[3.508s] writing manifest file '../../../build/aruco_detector_node/aruco_detector_node.egg-info/SOURCES.txt'
+[3.509s] running build
+[3.510s] running build_py
+[3.510s] creating /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build
+[3.511s] creating /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build/lib
+[3.511s] creating /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build/lib/ArUco_detector_node
+[3.512s] copying ArUco_detector_node/aruco_detector_publisher.py -> /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build/lib/ArUco_detector_node
+[3.512s] copying ArUco_detector_node/aruco_detector.py -> /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build/lib/ArUco_detector_node
+[3.512s] copying ArUco_detector_node/__init__.py -> /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build/lib/ArUco_detector_node
+[3.513s] running install
+[3.513s] running install_lib
+[3.515s] creating /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages/ArUco_detector_node
+[3.516s] copying /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build/lib/ArUco_detector_node/aruco_detector_publisher.py -> /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages/ArUco_detector_node
+[3.516s] copying /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build/lib/ArUco_detector_node/aruco_detector.py -> /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages/ArUco_detector_node
+[3.517s] copying /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build/lib/ArUco_detector_node/__init__.py -> /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages/ArUco_detector_node
+[3.517s] byte-compiling /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages/ArUco_detector_node/aruco_detector_publisher.py to aruco_detector_publisher.cpython-310.pyc
+[3.519s] byte-compiling /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages/ArUco_detector_node/aruco_detector.py to aruco_detector.cpython-310.pyc
+[3.521s] byte-compiling /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages/ArUco_detector_node/__init__.py to __init__.cpython-310.pyc
+[3.522s] running install_data
+[3.522s] copying resource/aruco_detector_node -> /home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/ament_index/resource_index/packages
+[3.522s] copying package.xml -> /home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node
+[3.523s] running install_egg_info
+[3.525s] Copying ../../../build/aruco_detector_node/aruco_detector_node.egg-info to /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages/aruco_detector_node-0.1.0-py3.10.egg-info
+[3.527s] running install_scripts
+[3.564s] Installing aruco_detector_node script to /home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/aruco_detector_node
+[3.564s] writing list of installed files to '/home/harold/Workspace/Quads_Project/build/aruco_detector_node/install.log'
+[3.630s] Invoked command in '/home/harold/Workspace/Quads_Project/drone_dev/src/ArUco_detector_node' returned '0': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/aruco_detector_node/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/aruco_detector_node build --build-base /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build install --record /home/harold/Workspace/Quads_Project/build/aruco_detector_node/install.log --single-version-externally-managed install_data --force

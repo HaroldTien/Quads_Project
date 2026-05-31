@@ -1,0 +1,21 @@
+[2.139s] Invoking command in '/home/harold/Workspace/Quads_Project/drone_dev/src/landing_controller_node': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/landing_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/landing_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/landing_controller build --build-base /home/harold/Workspace/Quads_Project/build/landing_controller/build install --record /home/harold/Workspace/Quads_Project/build/landing_controller/install.log --single-version-externally-managed install_data
+[2.627s] running egg_info
+[2.629s] writing ../../../build/landing_controller/landing_controller.egg-info/PKG-INFO
+[2.629s] writing dependency_links to ../../../build/landing_controller/landing_controller.egg-info/dependency_links.txt
+[2.629s] writing entry points to ../../../build/landing_controller/landing_controller.egg-info/entry_points.txt
+[2.630s] writing requirements to ../../../build/landing_controller/landing_controller.egg-info/requires.txt
+[2.630s] writing top-level names to ../../../build/landing_controller/landing_controller.egg-info/top_level.txt
+[2.636s] reading manifest file '../../../build/landing_controller/landing_controller.egg-info/SOURCES.txt'
+[2.636s] writing manifest file '../../../build/landing_controller/landing_controller.egg-info/SOURCES.txt'
+[2.637s] running build
+[2.637s] running build_py
+[2.638s] running install
+[2.639s] running install_lib
+[2.641s] running install_data
+[2.642s] running install_egg_info
+[2.651s] removing '/home/harold/Workspace/Quads_Project/install/landing_controller/lib/python3.10/site-packages/landing_controller-0.0.1-py3.10.egg-info' (and everything under it)
+[2.651s] Copying ../../../build/landing_controller/landing_controller.egg-info to /home/harold/Workspace/Quads_Project/install/landing_controller/lib/python3.10/site-packages/landing_controller-0.0.1-py3.10.egg-info
+[2.656s] running install_scripts
+[2.700s] Installing landing_controller_node script to /home/harold/Workspace/Quads_Project/install/landing_controller/bin
+[2.701s] writing list of installed files to '/home/harold/Workspace/Quads_Project/build/landing_controller/install.log'
+[2.786s] Invoked command in '/home/harold/Workspace/Quads_Project/drone_dev/src/landing_controller_node' returned '0': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/landing_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/landing_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/landing_controller build --build-base /home/harold/Workspace/Quads_Project/build/landing_controller/build install --record /home/harold/Workspace/Quads_Project/build/landing_controller/install.log --single-version-externally-managed install_data

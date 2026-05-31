@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: landing-controller-node
+Version: 0.0.1
+Summary: Precision landing controller: ArUco pose -> MAVROS velocity setpoints
+Home-page: UNKNOWN
+Maintainer: Harold
+Maintainer-email: a142758369@gmail.com
+License: MIT
+Platform: UNKNOWN
+
+UNKNOWN
+

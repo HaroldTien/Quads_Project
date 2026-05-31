@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: csi-camera-publisher
+Version: 0.1.0
+Summary: ROS 2 node for OV9281 CSI camera on Jetson Orin Nano
+Home-page: UNKNOWN
+Maintainer: Harold
+Maintainer-email: a142758369@gmail.com
+License: MIT
+Platform: UNKNOWN
+
+UNKNOWN
+

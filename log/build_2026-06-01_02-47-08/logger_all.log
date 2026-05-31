@@ -1,0 +1,410 @@
+[0.202s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--packages-select', 'aruco_detector_node', 'csi_camera_publisher', 'landing_controller']
+[0.203s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=False, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=6, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['aruco_detector_node', 'csi_camera_publisher', 'landing_controller'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0xffffaa8f61a0>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0xffffaa8f5cf0>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0xffffaa8f5cf0>>, mixin_verb=('build',))
+[0.507s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.508s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.508s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.508s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.508s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.508s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.508s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/harold/Workspace/Quads_Project'
+[0.508s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.509s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.529s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.529s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.529s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.529s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.529s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.530s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.530s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.530s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.530s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extensions ['ignore', 'ignore_ament_install']
+[0.530s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extension 'ignore'
+[0.530s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extension 'ignore_ament_install'
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extensions ['colcon_pkg']
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extension 'colcon_pkg'
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extensions ['colcon_meta']
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extension 'colcon_meta'
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extensions ['ros']
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extension 'ros'
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extensions ['cmake', 'python']
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extension 'cmake'
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extension 'python'
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extensions ['python_setup_py']
+[0.531s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev) by extension 'python_setup_py'
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extensions ['ignore', 'ignore_ament_install']
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extension 'ignore'
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extension 'ignore_ament_install'
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extensions ['colcon_pkg']
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extension 'colcon_pkg'
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extensions ['colcon_meta']
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extension 'colcon_meta'
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extensions ['ros']
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extension 'ros'
+[0.532s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extensions ['cmake', 'python']
+[0.533s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extension 'cmake'
+[0.533s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extension 'python'
+[0.533s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extensions ['python_setup_py']
+[0.533s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/airframe) by extension 'python_setup_py'
+[0.533s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/build) by extensions ['ignore', 'ignore_ament_install']
+[0.533s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/build) by extension 'ignore'
+[0.533s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/build) ignored
+[0.533s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/install) by extensions ['ignore', 'ignore_ament_install']
+[0.534s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/install) by extension 'ignore'
+[0.534s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/install) ignored
+[0.534s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/log) by extensions ['ignore', 'ignore_ament_install']
+[0.534s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/log) by extension 'ignore'
+[0.534s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/log) ignored
+[0.534s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extensions ['ignore', 'ignore_ament_install']
+[0.534s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extension 'ignore'
+[0.534s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extension 'ignore_ament_install'
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extensions ['colcon_pkg']
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extension 'colcon_pkg'
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extensions ['colcon_meta']
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extension 'colcon_meta'
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extensions ['ros']
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extension 'ros'
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extensions ['cmake', 'python']
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extension 'cmake'
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extension 'python'
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extensions ['python_setup_py']
+[0.535s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src) by extension 'python_setup_py'
+[0.536s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/ArUco_detector_node) by extensions ['ignore', 'ignore_ament_install']
+[0.536s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/ArUco_detector_node) by extension 'ignore'
+[0.536s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/ArUco_detector_node) by extension 'ignore_ament_install'
+[0.536s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/ArUco_detector_node) by extensions ['colcon_pkg']
+[0.536s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/ArUco_detector_node) by extension 'colcon_pkg'
+[0.536s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/ArUco_detector_node) by extensions ['colcon_meta']
+[0.536s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/ArUco_detector_node) by extension 'colcon_meta'
+[0.536s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/ArUco_detector_node) by extensions ['ros']
+[0.536s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/ArUco_detector_node) by extension 'ros'
+[0.541s] DEBUG:colcon.colcon_core.package_identification:Package 'drone_dev/src/ArUco_detector_node' with type 'ros.ament_python' and name 'aruco_detector_node'
+[0.542s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/csi_camera_node) by extensions ['ignore', 'ignore_ament_install']
+[0.542s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/csi_camera_node) by extension 'ignore'
+[0.542s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/csi_camera_node) by extension 'ignore_ament_install'
+[0.542s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/csi_camera_node) by extensions ['colcon_pkg']
+[0.542s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/csi_camera_node) by extension 'colcon_pkg'
+[0.542s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/csi_camera_node) by extensions ['colcon_meta']
+[0.542s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/csi_camera_node) by extension 'colcon_meta'
+[0.542s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/csi_camera_node) by extensions ['ros']
+[0.542s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/csi_camera_node) by extension 'ros'
+[0.544s] DEBUG:colcon.colcon_core.package_identification:Package 'drone_dev/src/csi_camera_node' with type 'ros.ament_python' and name 'csi_camera_publisher'
+[0.544s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/landing_controller_node) by extensions ['ignore', 'ignore_ament_install']
+[0.544s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/landing_controller_node) by extension 'ignore'
+[0.544s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/landing_controller_node) by extension 'ignore_ament_install'
+[0.544s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/landing_controller_node) by extensions ['colcon_pkg']
+[0.545s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/landing_controller_node) by extension 'colcon_pkg'
+[0.545s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/landing_controller_node) by extensions ['colcon_meta']
+[0.545s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/landing_controller_node) by extension 'colcon_meta'
+[0.545s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/landing_controller_node) by extensions ['ros']
+[0.545s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/src/landing_controller_node) by extension 'ros'
+[0.546s] DEBUG:colcon.colcon_core.package_identification:Package 'drone_dev/src/landing_controller_node' with type 'ros.ament_python' and name 'landing_controller'
+[0.546s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extensions ['ignore', 'ignore_ament_install']
+[0.546s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extension 'ignore'
+[0.546s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extension 'ignore_ament_install'
+[0.546s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extensions ['colcon_pkg']
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extension 'colcon_pkg'
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extensions ['colcon_meta']
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extension 'colcon_meta'
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extensions ['ros']
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extension 'ros'
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extensions ['cmake', 'python']
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extension 'cmake'
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extension 'python'
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extensions ['python_setup_py']
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev/tools) by extension 'python_setup_py'
+[0.547s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extensions ['ignore', 'ignore_ament_install']
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extension 'ignore'
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extension 'ignore_ament_install'
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extensions ['colcon_pkg']
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extension 'colcon_pkg'
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extensions ['colcon_meta']
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extension 'colcon_meta'
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extensions ['ros']
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extension 'ros'
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extensions ['cmake', 'python']
+[0.548s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extension 'cmake'
+[0.556s] Level 1:colcon.colcon_core.package_identification:_identify(drone_dev_sim) by extension 'python'
+[0.556s] DEBUG:colcon.colcon_core.package_identification:Package 'drone_dev_sim' with type 'cmake' and name 'drone_dev_sim'
+[0.556s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.556s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.556s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.556s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extensions ['ignore', 'ignore_ament_install']
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extension 'ignore'
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extension 'ignore_ament_install'
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extensions ['colcon_pkg']
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extension 'colcon_pkg'
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extensions ['colcon_meta']
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extension 'colcon_meta'
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extensions ['ros']
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extension 'ros'
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extensions ['cmake', 'python']
+[0.557s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extension 'cmake'
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extension 'python'
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extensions ['python_setup_py']
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection) by extension 'python_setup_py'
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extensions ['ignore', 'ignore_ament_install']
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extension 'ignore'
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extension 'ignore_ament_install'
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extensions ['colcon_pkg']
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extension 'colcon_pkg'
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extensions ['colcon_meta']
+[0.558s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extension 'colcon_meta'
+[0.559s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extensions ['ros']
+[0.559s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extension 'ros'
+[0.559s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extensions ['cmake', 'python']
+[0.559s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extension 'cmake'
+[0.559s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extension 'python'
+[0.559s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extensions ['python_setup_py']
+[0.559s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219) by extension 'python_setup_py'
+[0.559s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extensions ['ignore', 'ignore_ament_install']
+[0.559s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extension 'ignore'
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extension 'ignore_ament_install'
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extensions ['colcon_pkg']
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extension 'colcon_pkg'
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extensions ['colcon_meta']
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extension 'colcon_meta'
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extensions ['ros']
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extension 'ros'
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extensions ['cmake', 'python']
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extension 'cmake'
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extension 'python'
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extensions ['python_setup_py']
+[0.560s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_Im219/ images_taken) by extension 'python_setup_py'
+[0.561s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extensions ['ignore', 'ignore_ament_install']
+[0.561s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extension 'ignore'
+[0.561s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extension 'ignore_ament_install'
+[0.561s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extensions ['colcon_pkg']
+[0.561s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extension 'colcon_pkg'
+[0.561s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extensions ['colcon_meta']
+[0.561s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extension 'colcon_meta'
+[0.561s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extensions ['ros']
+[0.561s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extension 'ros'
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extensions ['cmake', 'python']
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extension 'cmake'
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extension 'python'
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extensions ['python_setup_py']
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218) by extension 'python_setup_py'
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extensions ['ignore', 'ignore_ament_install']
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extension 'ignore'
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extension 'ignore_ament_install'
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extensions ['colcon_pkg']
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extension 'colcon_pkg'
+[0.562s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extensions ['colcon_meta']
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extension 'colcon_meta'
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extensions ['ros']
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extension 'ros'
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extensions ['cmake', 'python']
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extension 'cmake'
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extension 'python'
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extensions ['python_setup_py']
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/__pycache__) by extension 'python_setup_py'
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extensions ['ignore', 'ignore_ament_install']
+[0.563s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extension 'ignore'
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extension 'ignore_ament_install'
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extensions ['colcon_pkg']
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extension 'colcon_pkg'
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extensions ['colcon_meta']
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extension 'colcon_meta'
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extensions ['ros']
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extension 'ros'
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extensions ['cmake', 'python']
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extension 'cmake'
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extension 'python'
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extensions ['python_setup_py']
+[0.564s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/Camera_calibration_OV9218/image_taken) by extension 'python_setup_py'
+[0.565s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extensions ['ignore', 'ignore_ament_install']
+[0.565s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extension 'ignore'
+[0.565s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extension 'ignore_ament_install'
+[0.565s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extensions ['colcon_pkg']
+[0.565s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extension 'colcon_pkg'
+[0.565s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extensions ['colcon_meta']
+[0.565s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extension 'colcon_meta'
+[0.565s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extensions ['ros']
+[0.565s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extension 'ros'
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extensions ['cmake', 'python']
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extension 'cmake'
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extension 'python'
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extensions ['python_setup_py']
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/__pycache__) by extension 'python_setup_py'
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extensions ['ignore', 'ignore_ament_install']
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extension 'ignore'
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extension 'ignore_ament_install'
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extensions ['colcon_pkg']
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extension 'colcon_pkg'
+[0.566s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extensions ['colcon_meta']
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extension 'colcon_meta'
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extensions ['ros']
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extension 'ros'
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extensions ['cmake', 'python']
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extension 'cmake'
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extension 'python'
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extensions ['python_setup_py']
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(landingPadDetection/mac_carera__) by extension 'python_setup_py'
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.567s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.568s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.568s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.568s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.568s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.568s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.568s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.633s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'drone_dev_sim' in 'drone_dev_sim'
+[0.634s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.634s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.638s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 280 installed packages in /opt/ros/humble
+[0.640s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.708s] Level 5:colcon.colcon_core.verb:set package 'aruco_detector_node' build argument 'cmake_args' from command line to 'None'
+[0.709s] Level 5:colcon.colcon_core.verb:set package 'aruco_detector_node' build argument 'cmake_target' from command line to 'None'
+[0.709s] Level 5:colcon.colcon_core.verb:set package 'aruco_detector_node' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.709s] Level 5:colcon.colcon_core.verb:set package 'aruco_detector_node' build argument 'cmake_clean_cache' from command line to 'False'
+[0.709s] Level 5:colcon.colcon_core.verb:set package 'aruco_detector_node' build argument 'cmake_clean_first' from command line to 'False'
+[0.709s] Level 5:colcon.colcon_core.verb:set package 'aruco_detector_node' build argument 'cmake_force_configure' from command line to 'False'
+[0.709s] Level 5:colcon.colcon_core.verb:set package 'aruco_detector_node' build argument 'ament_cmake_args' from command line to 'None'
+[0.709s] Level 5:colcon.colcon_core.verb:set package 'aruco_detector_node' build argument 'catkin_cmake_args' from command line to 'None'
+[0.709s] Level 5:colcon.colcon_core.verb:set package 'aruco_detector_node' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.709s] DEBUG:colcon.colcon_core.verb:Building package 'aruco_detector_node' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/harold/Workspace/Quads_Project/build/aruco_detector_node', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/harold/Workspace/Quads_Project/install/aruco_detector_node', 'merge_install': False, 'path': '/home/harold/Workspace/Quads_Project/drone_dev/src/ArUco_detector_node', 'symlink_install': False, 'test_result_base': None}
+[0.710s] Level 5:colcon.colcon_core.verb:set package 'csi_camera_publisher' build argument 'cmake_args' from command line to 'None'
+[0.710s] Level 5:colcon.colcon_core.verb:set package 'csi_camera_publisher' build argument 'cmake_target' from command line to 'None'
+[0.710s] Level 5:colcon.colcon_core.verb:set package 'csi_camera_publisher' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.710s] Level 5:colcon.colcon_core.verb:set package 'csi_camera_publisher' build argument 'cmake_clean_cache' from command line to 'False'
+[0.710s] Level 5:colcon.colcon_core.verb:set package 'csi_camera_publisher' build argument 'cmake_clean_first' from command line to 'False'
+[0.710s] Level 5:colcon.colcon_core.verb:set package 'csi_camera_publisher' build argument 'cmake_force_configure' from command line to 'False'
+[0.710s] Level 5:colcon.colcon_core.verb:set package 'csi_camera_publisher' build argument 'ament_cmake_args' from command line to 'None'
+[0.710s] Level 5:colcon.colcon_core.verb:set package 'csi_camera_publisher' build argument 'catkin_cmake_args' from command line to 'None'
+[0.710s] Level 5:colcon.colcon_core.verb:set package 'csi_camera_publisher' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.710s] DEBUG:colcon.colcon_core.verb:Building package 'csi_camera_publisher' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/harold/Workspace/Quads_Project/build/csi_camera_publisher', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher', 'merge_install': False, 'path': '/home/harold/Workspace/Quads_Project/drone_dev/src/csi_camera_node', 'symlink_install': False, 'test_result_base': None}
+[0.711s] Level 5:colcon.colcon_core.verb:set package 'landing_controller' build argument 'cmake_args' from command line to 'None'
+[0.711s] Level 5:colcon.colcon_core.verb:set package 'landing_controller' build argument 'cmake_target' from command line to 'None'
+[0.711s] Level 5:colcon.colcon_core.verb:set package 'landing_controller' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.711s] Level 5:colcon.colcon_core.verb:set package 'landing_controller' build argument 'cmake_clean_cache' from command line to 'False'
+[0.711s] Level 5:colcon.colcon_core.verb:set package 'landing_controller' build argument 'cmake_clean_first' from command line to 'False'
+[0.711s] Level 5:colcon.colcon_core.verb:set package 'landing_controller' build argument 'cmake_force_configure' from command line to 'False'
+[0.711s] Level 5:colcon.colcon_core.verb:set package 'landing_controller' build argument 'ament_cmake_args' from command line to 'None'
+[0.711s] Level 5:colcon.colcon_core.verb:set package 'landing_controller' build argument 'catkin_cmake_args' from command line to 'None'
+[0.711s] Level 5:colcon.colcon_core.verb:set package 'landing_controller' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.711s] DEBUG:colcon.colcon_core.verb:Building package 'landing_controller' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/harold/Workspace/Quads_Project/build/landing_controller', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/harold/Workspace/Quads_Project/install/landing_controller', 'merge_install': False, 'path': '/home/harold/Workspace/Quads_Project/drone_dev/src/landing_controller_node', 'symlink_install': False, 'test_result_base': None}
+[0.712s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.713s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.714s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/harold/Workspace/Quads_Project/drone_dev/src/ArUco_detector_node' with build type 'ament_python'
+[0.714s] Level 1:colcon.colcon_core.shell:create_environment_hook('aruco_detector_node', 'ament_prefix_path')
+[0.720s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.720s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/hook/ament_prefix_path.ps1'
+[0.722s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/hook/ament_prefix_path.dsv'
+[0.723s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/hook/ament_prefix_path.sh'
+[0.725s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.725s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.730s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/harold/Workspace/Quads_Project/drone_dev/src/csi_camera_node' with build type 'ament_python'
+[0.730s] Level 1:colcon.colcon_core.shell:create_environment_hook('csi_camera_publisher', 'ament_prefix_path')
+[0.730s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/hook/ament_prefix_path.ps1'
+[0.731s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/hook/ament_prefix_path.dsv'
+[0.732s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/hook/ament_prefix_path.sh'
+[0.733s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.733s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.737s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/harold/Workspace/Quads_Project/drone_dev/src/landing_controller_node' with build type 'ament_python'
+[0.737s] Level 1:colcon.colcon_core.shell:create_environment_hook('landing_controller', 'ament_prefix_path')
+[0.738s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/ament_prefix_path.ps1'
+[0.739s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/ament_prefix_path.dsv'
+[0.739s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/ament_prefix_path.sh'
+[0.741s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.741s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.231s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/harold/Workspace/Quads_Project/drone_dev/src/ArUco_detector_node'
+[1.231s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.232s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.736s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/harold/Workspace/Quads_Project/drone_dev/src/csi_camera_node'
+[1.737s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.737s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[2.213s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/harold/Workspace/Quads_Project/drone_dev/src/landing_controller_node'
+[2.214s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[2.214s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[2.877s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/harold/Workspace/Quads_Project/drone_dev/src/landing_controller_node': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/landing_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/landing_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/landing_controller build --build-base /home/harold/Workspace/Quads_Project/build/landing_controller/build install --record /home/harold/Workspace/Quads_Project/build/landing_controller/install.log --single-version-externally-managed install_data
+[2.894s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/harold/Workspace/Quads_Project/drone_dev/src/csi_camera_node': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/csi_camera_publisher/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/csi_camera_publisher build --build-base /home/harold/Workspace/Quads_Project/build/csi_camera_publisher/build install --record /home/harold/Workspace/Quads_Project/build/csi_camera_publisher/install.log --single-version-externally-managed install_data
+[2.897s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/harold/Workspace/Quads_Project/build/aruco_detector_node': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/aruco_detector_node/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build
+[3.488s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/harold/Workspace/Quads_Project/drone_dev/src/csi_camera_node' returned '0': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/csi_camera_publisher/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/csi_camera_publisher build --build-base /home/harold/Workspace/Quads_Project/build/csi_camera_publisher/build install --record /home/harold/Workspace/Quads_Project/build/csi_camera_publisher/install.log --single-version-externally-managed install_data
+[3.493s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher' for CMake module files
+[3.494s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher' for CMake config files
+[3.495s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/lib'
+[3.496s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/bin'
+[3.496s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/lib/pkgconfig/csi_camera_publisher.pc'
+[3.496s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/lib/python3.10/site-packages'
+[3.496s] Level 1:colcon.colcon_core.shell:create_environment_hook('csi_camera_publisher', 'pythonpath')
+[3.497s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/hook/pythonpath.ps1'
+[3.498s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/hook/pythonpath.dsv'
+[3.499s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/hook/pythonpath.sh'
+[3.500s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/bin'
+[3.501s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(csi_camera_publisher)
+[3.501s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/package.ps1'
+[3.504s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/package.dsv'
+[3.505s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/package.sh'
+[3.506s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/package.bash'
+[3.507s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/csi_camera_publisher/package.zsh'
+[3.509s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/harold/Workspace/Quads_Project/install/csi_camera_publisher/share/colcon-core/packages/csi_camera_publisher)
+[3.522s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/landing_controller' for CMake module files
+[3.524s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/harold/Workspace/Quads_Project/drone_dev/src/landing_controller_node' returned '0': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/landing_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/landing_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/landing_controller build --build-base /home/harold/Workspace/Quads_Project/build/landing_controller/build install --record /home/harold/Workspace/Quads_Project/build/landing_controller/install.log --single-version-externally-managed install_data
+[3.525s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/landing_controller' for CMake config files
+[3.527s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/landing_controller/lib'
+[3.527s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/landing_controller/bin'
+[3.527s] Level 1:colcon.colcon_core.shell:create_environment_hook('landing_controller', 'path')
+[3.528s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/path.ps1'
+[3.529s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/path.dsv'
+[3.530s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/path.sh'
+[3.531s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/landing_controller/lib/pkgconfig/landing_controller.pc'
+[3.532s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/landing_controller/lib/python3.10/site-packages'
+[3.532s] Level 1:colcon.colcon_core.shell:create_environment_hook('landing_controller', 'pythonpath')
+[3.532s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/pythonpath.ps1'
+[3.533s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/pythonpath.dsv'
+[3.534s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/pythonpath.sh'
+[3.536s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/landing_controller/bin'
+[3.536s] Level 1:colcon.colcon_core.shell:create_environment_hook('landing_controller', 'pythonscriptspath')
+[3.536s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/pythonscriptspath.ps1'
+[3.537s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/pythonscriptspath.dsv'
+[3.538s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/hook/pythonscriptspath.sh'
+[3.539s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(landing_controller)
+[3.541s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/package.ps1'
+[3.543s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/package.dsv'
+[3.544s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/package.sh'
+[3.545s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/package.bash'
+[3.546s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/landing_controller/share/landing_controller/package.zsh'
+[3.547s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/harold/Workspace/Quads_Project/install/landing_controller/share/colcon-core/packages/landing_controller)
+[3.751s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/harold/Workspace/Quads_Project/build/aruco_detector_node' returned '0': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/aruco_detector_node/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build
+[3.755s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/harold/Workspace/Quads_Project/drone_dev/src/ArUco_detector_node': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/aruco_detector_node/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/aruco_detector_node build --build-base /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build install --record /home/harold/Workspace/Quads_Project/build/aruco_detector_node/install.log --single-version-externally-managed install_data --force
+[4.343s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/aruco_detector_node' for CMake module files
+[4.346s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/harold/Workspace/Quads_Project/drone_dev/src/ArUco_detector_node' returned '0': PYTHONPATH=/home/harold/Workspace/Quads_Project/build/aruco_detector_node/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/aruco_detector_node build --build-base /home/harold/Workspace/Quads_Project/build/aruco_detector_node/build install --record /home/harold/Workspace/Quads_Project/build/aruco_detector_node/install.log --single-version-externally-managed install_data --force
+[4.347s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/aruco_detector_node' for CMake config files
+[4.348s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib'
+[4.348s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/bin'
+[4.348s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/pkgconfig/aruco_detector_node.pc'
+[4.349s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/lib/python3.10/site-packages'
+[4.349s] Level 1:colcon.colcon_core.shell:create_environment_hook('aruco_detector_node', 'pythonpath')
+[4.350s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/hook/pythonpath.ps1'
+[4.352s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/hook/pythonpath.dsv'
+[4.353s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/hook/pythonpath.sh'
+[4.355s] Level 1:colcon.colcon_core.environment:checking '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/bin'
+[4.355s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(aruco_detector_node)
+[4.356s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/package.ps1'
+[4.359s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/package.dsv'
+[4.360s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/package.sh'
+[4.362s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/package.bash'
+[4.364s] INFO:colcon.colcon_core.shell:Creating package script '/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/aruco_detector_node/package.zsh'
+[4.364s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/harold/Workspace/Quads_Project/install/aruco_detector_node/share/colcon-core/packages/aruco_detector_node)
+[4.365s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[4.366s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[4.366s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[4.367s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[4.368s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[4.368s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/harold/Workspace/Quads_Project/install/local_setup.ps1'
+[4.370s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/harold/Workspace/Quads_Project/install/_local_setup_util_ps1.py'
+[4.376s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/harold/Workspace/Quads_Project/install/setup.ps1'
+[4.380s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/harold/Workspace/Quads_Project/install/local_setup.sh'
+[4.382s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/harold/Workspace/Quads_Project/install/_local_setup_util_sh.py'
+[4.383s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/harold/Workspace/Quads_Project/install/setup.sh'
+[4.386s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/harold/Workspace/Quads_Project/install/local_setup.bash'
+[4.387s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/harold/Workspace/Quads_Project/install/setup.bash'
+[4.390s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/harold/Workspace/Quads_Project/install/local_setup.zsh'
+[4.392s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/harold/Workspace/Quads_Project/install/setup.zsh'
