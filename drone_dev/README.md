@@ -16,6 +16,9 @@ Then run the node-specific command:
 |------|---------|
 | CSI camera publisher | `ros2 launch csi_camera_publisher camera.launch.py` |
 | ArUco detector | `ros2 run aruco_detector_node aruco_detector_node --ros-args -p target_marker_id:=0 -p marker_length_m:=0.20` |
+| Landing controller | `ros2 launch landing_controller landing.launch.py` |
+| MAVROS (Pixhawk over serial) | `ros2 launch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600` |
+| Full stack (camera + ArUco + landing) | `ros2 launch landing_controller full_stack.launch.py` |
 | Pose check (optional) | `ros2 topic echo /aruco/pose` |
 
 Notes:
