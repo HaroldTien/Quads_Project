@@ -1,3 +1,0 @@
-[console_scripts]
-landing_controller_node = landing_controller.landing_controller_node:main
-

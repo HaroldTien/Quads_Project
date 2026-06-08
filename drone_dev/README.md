@@ -51,9 +51,11 @@ ros2 topic info /aruco/pose
 ros2 topic echo /camera/camera_info
 ros2 topic echo /aruco/pose
 ros2 topic hz /aruco/pose
+ros2 topic echo /mavros/state --once
 
 # Message type / interface
 ros2 topic type /aruco/pose
 ros2 interface show geometry_msgs/msg/PoseStamped
+
 ```
 

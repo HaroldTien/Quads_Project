@@ -14,8 +14,8 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
-from geometry_msgs.msg import PoseStamped, TwistStamped
-from mavros_msgs.msg import State
+from geometry_msgs.msg import PoseStamped
+from mavros_msgs.msg import State, PositionTarget
 from mavros_msgs.srv import CommandBool, SetMode
 
 from .controller import LandingController, camera_to_enu
@@ -71,9 +71,16 @@ class LandingControllerNode(Node):
         self.create_subscription(
             State, '/mavros/state', self.state_callback, state_qos)
 
-        # Publisher for velocity setpoints to MAVROS (/mavros/setpoint_velocity/cmd_vel)
+        # setpoint_raw/local uses PositionTarget with an explicit type_mask.
+        # This bypasses the setpoint_velocity plugin's frame/TF ambiguity and
+        # gives us direct control over which fields PX4 actually uses.
+        # MAVROS subscribes BEST_EFFORT on this topic as well.
+        setpoint_qos = QoSProfile(depth=10)
+        setpoint_qos.reliability = ReliabilityPolicy.BEST_EFFORT
+        setpoint_qos.history = HistoryPolicy.KEEP_LAST
+
         self.vel_pub = self.create_publisher(
-            TwistStamped, '/mavros/setpoint_velocity/cmd_vel', 10)
+            PositionTarget, '/mavros/setpoint_raw/local', setpoint_qos)
      
 
         # Call MAVROS arming service (True=arm, False=disarm).
@@ -115,12 +122,22 @@ class LandingControllerNode(Node):
         return age < self.pose_timeout
 
     def _publish_velocity(self, vx, vy, vz):
-        msg = TwistStamped()
+        msg = PositionTarget()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = 'base_link'
-        msg.twist.linear.x = vx
-        msg.twist.linear.y = vy
-        msg.twist.linear.z = vz
+        msg.header.frame_id = 'map'
+        msg.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
+        # type_mask: 1=ignore. Use velocity-only mask (ignore position + accel + yaw).
+        # 0b0000_1111_1100_0111 = 0x0FC7 = 4039
+        # bits 0-2 (pos), 6-8 (accel), 10 (yaw), 11 (yaw_rate) ignored
+        # bits 3-5 (vx,vy,vz) NOT set → velocity fields are active
+        msg.type_mask = (
+            PositionTarget.IGNORE_PX | PositionTarget.IGNORE_PY | PositionTarget.IGNORE_PZ |
+            PositionTarget.IGNORE_AFX | PositionTarget.IGNORE_AFY | PositionTarget.IGNORE_AFZ |
+            PositionTarget.IGNORE_YAW | PositionTarget.IGNORE_YAW_RATE
+        )
+        msg.velocity.x = vx
+        msg.velocity.y = vy
+        msg.velocity.z = vz
         self.vel_pub.publish(msg)
 
     def _request_offboard_and_arm(self):

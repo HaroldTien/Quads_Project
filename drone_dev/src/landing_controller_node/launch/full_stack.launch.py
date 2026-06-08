@@ -38,5 +38,4 @@ def generate_launch_description():
             parameters=[landing_params],
             output='screen',
         ),
-
     ])
