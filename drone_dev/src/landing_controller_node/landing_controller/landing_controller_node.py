@@ -17,8 +17,10 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from geometry_msgs.msg import PoseStamped
 from mavros_msgs.msg import State, PositionTarget
 from mavros_msgs.srv import CommandBool, SetMode
+ 
 
 from .controller import LandingController, camera_to_enu
+from .takeoffcontroller import TakeoffController
 
 
 class LandingControllerNode(Node):
@@ -37,6 +39,10 @@ class LandingControllerNode(Node):
         self.declare_parameter('pose_timeout', 0.5)      # Marker considered "lost" if no pose for this duration (s)
         self.declare_parameter('rate_hz', 20.0)          # Rate at which velocity setpoints are streamed (Hz)
         self.declare_parameter('auto_offboard', False)   # If true, auto-arm and switch to OFFBOARD mode (CAUTION)
+        self.declare_parameter('target_alt', 1.0)        # Target altitude for takeoff (m)
+        self.declare_parameter('climb_vel', 0.3)         # Climb velocity (m/s)
+        self.declare_parameter('alt_tol', 0.02)          # Altitude tolerance for takeoff (m)
+
 
         gp = self.get_parameter
         self.controller = LandingController(
@@ -47,6 +53,12 @@ class LandingControllerNode(Node):
         self.pose_timeout = gp('pose_timeout').value
         self.rate_hz = gp('rate_hz').value
         self.auto_offboard = gp('auto_offboard').value
+
+        self.takeoff_controller = TakeoffController(
+            target_alt=gp('target_alt').value,
+            climb_vel=gp('climb_vel').value,
+            alt_tol=gp('alt_tol').value,
+        )
 
         # --- State ---
         self.state = 'SEARCH'
