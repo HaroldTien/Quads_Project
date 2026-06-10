@@ -12,9 +12,9 @@ LANDING_PAD_ID = 0
 # 5x5 family options: 50, 100, 250, 1000
 ARUCO_DICT_NAME = "DICT_5X5_50"
 CAMERA_INDEX = 0
-FRAME_WIDTH = 1280
-FRAME_HEIGHT = 800
-FPS = 30
+FRAME_WIDTH = 640      # was 1280
+FRAME_HEIGHT = 480     # was 800
+FPS = 15               # was 30
 # ------------------------------
 
 
@@ -58,6 +58,38 @@ def open_camera():
     return None
 
 
+def estimate_pose_markers(corners, camera_matrix, dist_coeffs):
+    marker_size = MARKER_SIZE_METERS
+    rvecs = []
+    tvecs = []
+
+    object_points = np.array([
+        [-marker_size / 2, -marker_size / 2, 0],
+        [marker_size / 2, -marker_size / 2, 0],
+        [marker_size / 2, marker_size / 2, 0],
+        [-marker_size / 2, marker_size / 2, 0],
+    ], dtype=np.float32)
+
+    for corner in corners:
+        image_points = corner[0].astype(np.float32)
+        success, rvec, tvec = cv2.solvePnP(
+            object_points,
+            image_points,
+            camera_matrix,
+            dist_coeffs,
+            useExtrinsicGuess=False,
+            flags=cv2.SOLVEPNP_IPPE_SQUARE,
+        )
+        if success:
+            rvecs.append(rvec)
+            tvecs.append(tvec)
+        else:
+            rvecs.append(np.zeros((3, 1)))
+            tvecs.append(np.zeros((3, 1)))
+
+    return np.array(rvecs), np.array(tvecs)
+
+
 def main():
     base_dir = Path(__file__).resolve().parent
     camera_matrix, dist_coeffs = load_calibration(base_dir)
@@ -99,12 +131,7 @@ def main():
         if ids is not None and len(ids) > 0:
             aruco.drawDetectedMarkers(frame, corners, ids)
 
-            rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(
-                corners,
-                MARKER_SIZE_METERS,
-                camera_matrix,
-                dist_coeffs,
-            )
+            rvecs, tvecs = estimate_pose_markers(corners, camera_matrix, dist_coeffs)
 
             for i, marker_id in enumerate(ids.flatten()):
                 rvec = rvecs[i]
@@ -112,7 +139,7 @@ def main():
 
                 cv2.drawFrameAxes(frame, camera_matrix, dist_coeffs, rvec, tvec, 0.08)
 
-                x, y, z = tvec[0]
+                x, y, z = tvec.flatten()
                 label = f"ID:{marker_id} X:{x:+.2f}m Y:{y:+.2f}m Z:{z:.2f}m"
 
                 p = corners[i][0][0].astype(int)
