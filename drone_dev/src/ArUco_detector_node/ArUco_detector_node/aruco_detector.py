@@ -50,6 +50,13 @@ class ArucoDetector:
         self,
         marker_length_m: float = 0.20,
         dictionary_name: str = "DICT_5X5_250",
+        enable_clahe: bool = True,
+        clahe_clip_limit: float = 1.5,
+        clahe_tile_size: int = 8,
+        enable_denoise: bool = True,
+        denoise_diameter: int = 5,
+        denoise_sigma_color: float = 50.0,
+        denoise_sigma_space: float = 50.0,
     ) -> None:
         # Physical marker size in meters (used by pose estimation).
         self.marker_length_m = marker_length_m
@@ -60,24 +67,89 @@ class ArucoDetector:
         dictionary_id = getattr(cv2.aruco, dictionary_name)
         self.dictionary = cv2.aruco.getPredefinedDictionary(dictionary_id)
 
-        # Configure detector behavior (thresholding, corner refinement, etc.).
+        # Configure detector behavior tuned for low-light / uneven lighting:
+        #  - Wide adaptive-threshold window range handles patchy shadows & glare.
+        #  - Moderate perimeter/error-correction rates stay permissive for dim
+        #    markers without admitting noisy/false reads.
+        #  - Subpixel corner refinement for accurate corner locations.
         self.parameters = cv2.aruco.DetectorParameters()
+        self.parameters.adaptiveThreshWinSizeMin = 3
+        self.parameters.adaptiveThreshWinSizeMax = 53
+        self.parameters.adaptiveThreshWinSizeStep = 10
+        self.parameters.adaptiveThreshConstant = 7
+        self.parameters.minMarkerPerimeterRate = 0.05
+        self.parameters.errorCorrectionRate = 0.5
+        self.parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+        self.parameters.cornerRefinementWinSize = 5
+
+        # Low-light preprocessing config. CLAHE equalises local contrast (the core
+        # low-light fix); bilateral denoise suppresses the sensor grain CLAHE
+        # amplifies, which otherwise wobbles corners frame-to-frame.
+        self.enable_clahe = enable_clahe
+        self.clahe = (
+            cv2.createCLAHE(
+                clipLimit=clahe_clip_limit,
+                tileGridSize=(clahe_tile_size, clahe_tile_size),
+            )
+            if enable_clahe
+            else None
+        )
+        self.enable_denoise = enable_denoise
+        self.denoise_diameter = denoise_diameter
+        self.denoise_sigma_color = denoise_sigma_color
+        self.denoise_sigma_space = denoise_sigma_space
 
         # OpenCV has two APIs depending on version. Keep both for compatibility.
         self.use_modern_api = hasattr(cv2.aruco, "ArucoDetector")
         if self.use_modern_api:
             self.detector = cv2.aruco.ArucoDetector(self.dictionary, self.parameters)
 
-    def detect(self, frame_bgr: np.ndarray) -> Tuple[List[np.ndarray], np.ndarray]:
-        """Detect markers and return (corners, ids)."""
+    def _detect_markers(self, image: np.ndarray) -> Tuple[List[np.ndarray], np.ndarray]:
+        """Single detection pass on a (grayscale) image via whichever API exists."""
         if self.use_modern_api:
-            corners, ids, _ = self.detector.detectMarkers(frame_bgr)
+            corners, ids, _ = self.detector.detectMarkers(image)
         else:
             corners, ids, _ = cv2.aruco.detectMarkers(
-                frame_bgr,
+                image,
                 self.dictionary,
                 parameters=self.parameters,
             )
+        return corners, ids
+
+    def _preprocess(self, gray: np.ndarray) -> np.ndarray:
+        """Apply CLAHE (+ optional bilateral denoise) for low-light contrast."""
+        enhanced = self.clahe.apply(gray) if self.clahe is not None else gray
+        if self.enable_denoise:
+            enhanced = cv2.bilateralFilter(
+                enhanced,
+                self.denoise_diameter,
+                self.denoise_sigma_color,
+                self.denoise_sigma_space,
+            )
+        return enhanced
+
+    def detect(self, frame_bgr: np.ndarray) -> Tuple[List[np.ndarray], np.ndarray]:
+        """
+        Detect markers and return (corners, ids).
+
+        Two-pass strategy for robustness across lighting:
+          Pass 1 ("enhanced"): CLAHE (+ denoise) image — best for low light/shadows.
+          Pass 2 ("raw"):      original grayscale — recovers markers that aggressive
+                               CLAHE/denoise washed out (e.g. strong/over-exposed light).
+
+        We feed grayscale (not pre-binarised) images: detectMarkers runs its own
+        multi-window adaptive thresholding, so pre-thresholding is redundant.
+        """
+        gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+
+        if self.enable_clahe or self.enable_denoise:
+            enhanced = self._preprocess(gray)
+            corners, ids = self._detect_markers(enhanced)
+            if ids is not None and len(ids) > 0:
+                return corners, ids
+
+        # Fallback (or the only pass when preprocessing is disabled): raw gray.
+        corners, ids = self._detect_markers(gray)
 
         # Normalize "no detection" to an empty list + None for easier handling.
         if ids is None:

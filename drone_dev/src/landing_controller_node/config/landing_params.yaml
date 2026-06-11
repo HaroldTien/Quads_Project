@@ -20,5 +20,11 @@ landing_controller_node:
     pose_timeout: 0.5   # marker considered "lost" if no pose for 0.5 s
     rate_hz: 20.0       # setpoint stream rate (MUST be >= 2 Hz for OFFBOARD)
 
+    # --- Takeoff ---
+    target_alt: 1.0       # climb to this altitude before searching for the marker (m)
+    climb_vel: 0.3        # vertical climb speed during takeoff (m/s)
+    alt_tol: 0.05         # consider takeoff done within this of target_alt (m)
+    enable_takeoff: true  # start in TAKEOFF; set false to skip straight to SEARCH
+
     # --- Safety: leave FALSE until bench-tested with props off ---
     auto_offboard: false

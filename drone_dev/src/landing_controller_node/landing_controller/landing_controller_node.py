@@ -17,8 +17,10 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from geometry_msgs.msg import PoseStamped
 from mavros_msgs.msg import State, PositionTarget
 from mavros_msgs.srv import CommandBool, SetMode
+ 
 
 from .controller import LandingController, camera_to_enu
+from .takeoffcontroller import TakeoffController
 
 
 class LandingControllerNode(Node):
@@ -37,6 +39,11 @@ class LandingControllerNode(Node):
         self.declare_parameter('pose_timeout', 0.5)      # Marker considered "lost" if no pose for this duration (s)
         self.declare_parameter('rate_hz', 20.0)          # Rate at which velocity setpoints are streamed (Hz)
         self.declare_parameter('auto_offboard', False)   # If true, auto-arm and switch to OFFBOARD mode (CAUTION)
+        self.declare_parameter('target_alt', 1.0)        # Target altitude for takeoff (m)
+        self.declare_parameter('climb_vel', 0.3)         # Climb velocity (m/s)
+        self.declare_parameter('alt_tol', 0.02)          # Altitude tolerance for takeoff (m)
+        self.declare_parameter('enable_takeoff', True)   # Start in TAKEOFF before searching for the marker
+
 
         gp = self.get_parameter
         self.controller = LandingController(
@@ -47,12 +54,20 @@ class LandingControllerNode(Node):
         self.pose_timeout = gp('pose_timeout').value
         self.rate_hz = gp('rate_hz').value
         self.auto_offboard = gp('auto_offboard').value
+        self.enable_takeoff = gp('enable_takeoff').value
+
+        self.takeoff_controller = TakeoffController(
+            target_alt=gp('target_alt').value,
+            climb_vel=gp('climb_vel').value,
+            alt_tol=gp('alt_tol').value,
+        )
 
         # --- State ---
-        self.state = 'SEARCH'
+        self.state = 'TAKEOFF' if self.enable_takeoff else 'SEARCH'
         self.latest_enu = None
         self.last_pose_time = None
         self.current_alt = None          # altitude above marker (cam z)
+        self.takeoff_alt = None          # drone altitude from /mavros/local_position/pose (m)
         self.mav_state = State()         # latest /mavros/state
         self._offboard_requested = False
 
@@ -70,6 +85,11 @@ class LandingControllerNode(Node):
             PoseStamped, '/aruco/pose', self.pose_callback, 10)
         self.create_subscription(
             State, '/mavros/state', self.state_callback, state_qos)
+        # Drone's own altitude estimate — used for takeoff, independent of
+        # the marker. MAVROS publishes this BEST_EFFORT, like /mavros/state.
+        self.create_subscription(
+            PoseStamped, '/mavros/local_position/pose',
+            self.local_pose_callback, state_qos)
 
         # setpoint_raw/local uses PositionTarget with an explicit type_mask.
         # This bypasses the setpoint_velocity plugin's frame/TF ambiguity and
@@ -111,6 +131,10 @@ class LandingControllerNode(Node):
 
     def state_callback(self, msg: State):
         self.mav_state = msg
+
+    def local_pose_callback(self, msg: PoseStamped):
+        """Drone's local altitude (ENU z, metres) — drives the takeoff climb."""
+        self.takeoff_alt = msg.pose.position.z
 
     # ---------- Helpers ----------
 
@@ -159,9 +183,34 @@ class LandingControllerNode(Node):
         OFFBOARD stream never goes silent. Decides what to publish based on
         the state machine.
         """
+        # --- TAKEOFF: runs on its own, ignores the marker entirely ---
+        if self.state == 'TAKEOFF':
+            if self.takeoff_alt is None:
+                # No altitude estimate yet — hover so the stream stays alive
+                # but we never blindly climb on missing data.
+                self._publish_velocity(0.0, 0.0, 0.0)
+                self.get_logger().warn(
+                    'TAKEOFF waiting for /mavros/local_position/pose ...',
+                    throttle_duration_sec=2.0)
+            else:
+                vx, vy, vz = self.takeoff_controller.compute_velocity(
+                    self.takeoff_alt)
+                self._publish_velocity(vx, vy, vz)
+                if self.takeoff_controller.is_complete(self.takeoff_alt):
+                    self.state = 'SEARCH'
+                    self.get_logger().info(
+                        f'Takeoff complete at {self.takeoff_alt:.2f} m — '
+                        'searching for marker')
+            self._maybe_request_offboard()
+            self.get_logger().info(
+                f'state=TAKEOFF alt={self.takeoff_alt}',
+                throttle_duration_sec=1.0)
+            return
+
         fresh = self._marker_fresh()
 
         # --- State transitions ---
+
         if not fresh:
             # Lost the marker (or never had it). Hold position safely.
             if self.state in ('CENTER', 'DESCEND'):
@@ -173,7 +222,7 @@ class LandingControllerNode(Node):
             centered = self.controller.is_centered(self.latest_enu)
             # Check if the current altitude is below the landing altitude.
             low_enough = (self.current_alt is not None
-                          and self.current_alt < self.controller.land_alt)
+                        and self.current_alt < self.controller.land_alt)
 
             if self.state in ('SEARCH', 'HOLD'):
                 self.state = 'CENTER'
@@ -200,13 +249,17 @@ class LandingControllerNode(Node):
             self._do_land()
 
         # --- OFFBOARD handshake: only after the stream is alive ---
+        self._maybe_request_offboard()
+
+        self.get_logger().info(f'state={self.state} fresh={fresh}',
+                               throttle_duration_sec=1.0)
+
+    def _maybe_request_offboard(self):
+        """Switch to OFFBOARD + arm once, after setpoints are streaming."""
         if (self.auto_offboard and not self._offboard_requested
                 and self.mav_state.connected):
             self._request_offboard_and_arm()
             self._offboard_requested = True
-
-        self.get_logger().info(f'state={self.state} fresh={fresh}',
-                               throttle_duration_sec=1.0)
 
     def _do_land(self):
         """Hand off to PX4's AUTO.LAND, which does a gentle touchdown."""
