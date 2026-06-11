@@ -16,8 +16,20 @@ class ArucoDetectorNode(Node):
 
         # Marker settings for your current landing pad marker.
         self.declare_parameter("marker_length_m", 0.20)
-        self.declare_parameter("dictionary_name", "DICT_5X5_250")
+        # NOTE: must match your PRINTED marker family. The low-light pipeline was
+        # tuned/tested on DICT_5X5_50; change this if your markers differ.
+        self.declare_parameter("dictionary_name", "DICT_5X5_50")
         self.declare_parameter("target_marker_id", 0)
+
+        # Low-light preprocessing tuning (see ArucoDetector).
+        self.declare_parameter("enable_clahe", True)
+        self.declare_parameter("clahe_clip_limit", 1.5)
+        self.declare_parameter("clahe_tile_size", 8)
+        self.declare_parameter("enable_denoise", True)
+        self.declare_parameter("denoise_diameter", 5)
+        self.declare_parameter("denoise_sigma_color", 50.0)
+        self.declare_parameter("denoise_sigma_space", 50.0)
+
         marker_length_m = float(self.get_parameter("marker_length_m").value)
         dictionary_name = str(self.get_parameter("dictionary_name").value)
         self.target_marker_id = int(self.get_parameter("target_marker_id").value)
@@ -29,6 +41,13 @@ class ArucoDetectorNode(Node):
         self.detector = ArucoDetector(
             marker_length_m=marker_length_m,
             dictionary_name=dictionary_name,
+            enable_clahe=bool(self.get_parameter("enable_clahe").value),
+            clahe_clip_limit=float(self.get_parameter("clahe_clip_limit").value),
+            clahe_tile_size=int(self.get_parameter("clahe_tile_size").value),
+            enable_denoise=bool(self.get_parameter("enable_denoise").value),
+            denoise_diameter=int(self.get_parameter("denoise_diameter").value),
+            denoise_sigma_color=float(self.get_parameter("denoise_sigma_color").value),
+            denoise_sigma_space=float(self.get_parameter("denoise_sigma_space").value),
         )
         self.get_logger().info(
             "ArUco settings: dictionary=%s marker_length_m=%.3f target_marker_id=%d"
