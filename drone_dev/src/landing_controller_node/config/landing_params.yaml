@@ -1,0 +1,30 @@
+# Landing controller tuning parameters.
+# Edit these and re-launch — no rebuild needed (the launch file loads this).
+#
+# The node name must match the node in code ('landing_controller_node').
+landing_controller_node:
+  ros__parameters:
+    # --- P-controller gains (start LOW, tune up gradually) ---
+    kp_xy: 0.5          # horizontal: vel = kp_xy * horizontal_error (m/s per m)
+    kp_z: 0.3           # descent:    vel = kp_z * altitude_error
+
+    # --- Safety clamps (m/s) — a bad detection must not lurch the drone ---
+    max_xy: 0.4         # cap horizontal speed
+    max_z: 0.3          # cap descent speed
+
+    # --- State-machine thresholds (m) ---
+    center_tol: 0.10    # within 10 cm horizontally = "centered", begin descent
+    land_alt: 0.20      # below 20 cm altitude = hand off to AUTO.LAND
+
+    # --- Timing ---
+    pose_timeout: 0.5   # marker considered "lost" if no pose for 0.5 s
+    rate_hz: 20.0       # setpoint stream rate (MUST be >= 2 Hz for OFFBOARD)
+
+    # --- Takeoff ---
+    target_alt: 1.0       # climb to this altitude before searching for the marker (m)
+    climb_vel: 0.3        # vertical climb speed during takeoff (m/s)
+    alt_tol: 0.05         # consider takeoff done within this of target_alt (m)
+    enable_takeoff: true  # start in TAKEOFF; set false to skip straight to SEARCH
+
+    # --- Safety: leave FALSE until bench-tested with props off ---
+    auto_offboard: false
