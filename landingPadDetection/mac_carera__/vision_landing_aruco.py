@@ -17,7 +17,7 @@ ARUCO_DICT_NAME = "DICT_5X5_50"
 # testing use index 1 = built-in MacBook camera. Revert to 0 for the Jetson/OV9281.
 # NOTE: built-in cam intrinsics differ from the OV9281 calibration files, so the
 # metric distance (Z) will be wrong here — detection/jitter/flip behavior is still valid.
-CAMERA_INDEX = 1
+CAMERA_INDEX = 0
 FRAME_WIDTH = 1280
 FRAME_HEIGHT = 800
 FPS = 30
@@ -128,11 +128,13 @@ def open_camera():
 
 def build_detector():
     """
-    Returns an ArucoDetector with parameters tuned for low-light/shadow conditions.
-    Key changes vs defaults:
-      - Wider adaptive threshold window range catches markers under uneven lighting
-      - Slightly lower minMarkerPerimeterRate helps with small/partially lit markers
-      - Higher errorCorrectionRate tolerates bit errors from noise in dark regions
+    Returns an ArucoDetector tuned for low-light/shadow conditions while keeping
+    pose stable:
+      - Wide adaptive-threshold window range handles markers under uneven lighting.
+      - minMarkerPerimeterRate / errorCorrectionRate are kept MODERATE (see the
+        constants) — permissive enough for dim markers, but tight enough to reject
+        the tiny/noisy detections that drive pose jitter.
+      - Subpixel corner refinement for accurate corner locations.
     """
     aruco_dict_id = getattr(aruco, ARUCO_DICT_NAME, None)
     if aruco_dict_id is None:
@@ -241,30 +243,26 @@ def preprocess_frame(gray: np.ndarray, clahe) -> np.ndarray:
     return enhanced
 
 
-def detect_with_fallback(detector, gray_clahe: np.ndarray):
+def detect_with_fallback(detector, gray: np.ndarray, gray_enhanced: np.ndarray):
     """
-    Two-pass detection:
-      Pass 1: CLAHE-enhanced grayscale (handles most low-light cases)
-      Pass 2: Adaptive threshold on top of CLAHE (handles extreme shadows/hotspots)
-    Returns corners, ids from whichever pass succeeds first.
-    """
-    corners, ids, rejected = detector.detectMarkers(gray_clahe)
+    Two-pass detection, returning corners/ids from whichever pass succeeds first
+    plus a tag of which input worked:
+      Pass 1 ("enhanced"): CLAHE (+ optional denoise) image — best for low light
+                           and uneven shadows.
+      Pass 2 ("raw"):      original grayscale — recovers markers that aggressive
+                           CLAHE/denoise washed out or whose noise it amplified.
 
+    We deliberately do NOT pre-binarise the image: ArUco's detectMarkers already
+    runs its own multi-window adaptive thresholding (the adaptiveThreshWinSize*
+    params), so feeding it a pre-thresholded binary image is redundant and tends to
+    hurt detection rather than help.
+    """
+    corners, ids, _ = detector.detectMarkers(gray_enhanced)
     if ids is not None and len(ids) > 0:
-        return corners, ids, "clahe"
+        return corners, ids, "enhanced"
 
-    # Fallback: binarise with adaptive threshold to crush uneven shadows
-    adaptive = cv2.adaptiveThreshold(
-        gray_clahe,
-        255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY,
-        11,
-        2,
-    )
-    corners, ids, _ = detector.detectMarkers(adaptive)
-
-    return corners, ids, "adaptive"
+    corners, ids, _ = detector.detectMarkers(gray)
+    return corners, ids, "raw"
 
 
 def _rvec_to_quat(rvec: np.ndarray) -> np.ndarray:
@@ -396,31 +394,33 @@ class LandingPadPose:
     tvec is meters from camera to marker center; rvec is the marker orientation
     as a Rodrigues vector. reproj_error is the solver's pixel reprojection error.
 
-    NOTE for flight-controller integration: this is the CAMERA frame, not the
-    drone body/nav frame. The downstream MAVLink step must apply the camera→body
-    mounting transform (rotation + lever-arm) before sending LANDING_TARGET. For a
-    typical down-facing camera, body-forward ≈ camera +Y-ish and body-down ≈ camera
-    +Z — but the exact mapping depends on how the camera is bolted on, so it lives
-    in the integration layer, not here.
+    NOTE for flight-controller integration (via MAVROS): this is the CAMERA frame,
+    not the drone body/nav frame. The downstream MAVROS node must apply the
+    camera→body mounting transform (rotation + lever-arm) — typically via a TF2
+    frame lookup — before publishing. For a typical down-facing camera,
+    body-forward ≈ camera +Y-ish and body-down ≈ camera +Z, but the exact mapping
+    depends on how the camera is bolted on, so it lives in the integration layer.
     """
     marker_id: int
     tvec: np.ndarray          # (3,1) meters, camera frame
     rvec: np.ndarray          # (3,1) Rodrigues, camera frame
     reproj_error: float       # pixels
     is_valid: bool            # False if this frame's measurement was an outlier
-    detect_mode: str          # "clahe" or "adaptive"
+    detect_mode: str          # "enhanced" or "raw"
 
 
 def publish_pose(pose: LandingPadPose) -> None:
     """
-    Hook for sending the landing-pad pose to the flight controller.
+    Hook for handing the landing-pad pose to the flight controller via MAVROS.
 
-    TODO (follow-on): convert `pose` from the camera frame to the drone body/nav
-    frame using the camera mounting transform, then send a MAVLink LANDING_TARGET
-    message (e.g. via pymavlink) so the autopilot can servo the precision landing.
-    Currently a no-op so the vision pipeline can run standalone on the bench.
+    TODO (follow-on): run this pipeline inside a ROS 2 (rclpy) node, transform
+    `pose` from the camera frame to the drone body/nav frame (TF2), and publish to
+    the MAVROS landing-target plugin — i.e. a geometry_msgs/PoseStamped on
+    /mavros/landing_target/pose, or a mavros_msgs/LandingTarget on
+    /mavros/landing_target/raw. MAVROS relays it to the autopilot for precision
+    landing. Currently a no-op so the vision pipeline can run standalone on the bench.
     """
-    # Intentionally left as a no-op until MAVLink transport is wired up.
+    # Intentionally left as a no-op until the MAVROS publisher is wired up.
     return
 
 
@@ -467,8 +467,8 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray_clahe = preprocess_frame(gray, clahe)
 
-        # Detection runs on the untouched 1-channel CLAHE image.
-        corners, ids, detect_mode = detect_with_fallback(detector, gray_clahe)
+        # Detection runs on the 1-channel images; "enhanced" first, then raw gray.
+        corners, ids, detect_mode = detect_with_fallback(detector, gray, gray_clahe)
 
         # Display copy: promote CLAHE feed to 3-channel BGR so we can draw
         # colored overlays on it. The detector never sees this copy.
