@@ -13,15 +13,20 @@ class TakeoffController:
         self.alt_tol = alt_tol
 
     def is_complete(self, current_alt):
-        """True once we're within tolerance of the target."""
+        """True once we're within tolerance of the target.
+
+        An unknown altitude (None) is never "complete".
+        """
+        if current_alt is None:
+            return False
         return current_alt >= (self.target_alt - self.alt_tol)
 
     def compute_velocity(self, current_alt):
         """Return (vx, vy, vz) for this tick.
 
-        Pure vertical climb. Returns zero climb once complete so a
-        late call can't overshoot.
+        Pure vertical climb. Returns zero climb once complete (or when the
+        altitude is unknown) so a late or blind call can't overshoot.
         """
-        if self.is_complete(current_alt):
+        if current_alt is None or self.is_complete(current_alt):
             return (0.0, 0.0, 0.0)
         return (0.0, 0.0, self.climb_vel)
