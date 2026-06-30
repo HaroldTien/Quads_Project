@@ -3,6 +3,7 @@ import cv2.aruco as aruco
 import numpy as np
 import sys
 import time
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -67,6 +68,48 @@ MAX_REPROJ_ERROR_PX = 4.0
 # ------------------------------------
 
 
+# ======== Light characterization ========
+# Self-contained measurement/logging path. It runs on the COLOUR frame ALONGSIDE
+# detection but never feeds into it. Flip LIGHT_CHAR_ENABLED to False to turn all
+# of this off and leave normal operation untouched.
+#
+# WHY measurement reads a colour luminance channel and NOT the grayscale detection
+# frame: the detection frame is grayscaled then run through CLAHE (local contrast
+# equalisation) and bilateral denoise. CLAHE deliberately rescales local brightness
+# for detectability, so a dark marker and a bright marker can end up with similar
+# pixel values — measuring off it would measure how hard CLAHE worked, not how much
+# light hit the sensor. For characterization we convert the raw BGR frame to LAB and
+# read L* (CIE lightness), which tracks actual scene illuminance and is what we'll
+# correlate against the manually-measured lux column.
+LIGHT_CHAR_ENABLED   = True
+LIGHT_CSV_PATH       = "light_char_log.csv"    # one row per frame
+FPS_REPORT_INTERVAL  = 5.0                      # seconds between measured-FPS prints
+
+# Brightness channel: "LAB" -> L*  (default) or "YCRCB" -> Y. Never BGR2GRAY, and
+# never the CLAHE detection frame — see note above.
+LUMA_COLORSPACE      = "LAB"
+
+# --- Manual sensor locks (so light metrics are valid & comparable frame-to-frame) ---
+# Auto exposure/gain/white-balance continuously retune the sensor, which makes any
+# luminance or clipping number meaningless across frames. Lock them for a capture.
+# Each value: -1 = leave at the camera's current/auto behaviour; a number = lock to it.
+LOCK_AUTO_EXPOSURE   = False    # True disables AE so FIXED_EXPOSURE takes effect
+FIXED_EXPOSURE       = -1
+LOCK_AUTO_GAIN       = False    # True disables auto-gain so FIXED_GAIN takes effect
+FIXED_GAIN           = -1
+LOCK_AUTO_WB         = False    # True disables auto-white-balance
+FIXED_WB_TEMP        = -1       # white-balance colour temperature, e.g. 4000
+
+# CAP_PROP_AUTO_EXPOSURE "manual" magic value differs by backend:
+#   V4L2 (Jetson): 1   |   UVC/AVFoundation (macOS): 0.25
+AE_MANUAL_VALUE      = 0.25 if sys.platform == "darwin" else 1
+
+# Michelson sampling grid: a DICT_5X5 marker is 5x5 data cells + a 1-cell black
+# border = 7x7 cells. We warp the marker to this grid to sample white/black cells.
+MARKER_GRID_CELLS    = 7
+# ==========================================
+
+
 def load_calibration(base_dir: Path):
     camera_matrix_path = base_dir / "camera_matrix.npy"
     dist_coeffs_path = base_dir / "dist_coeffs.npy"
@@ -106,6 +149,12 @@ def open_camera():
         cap.set(cv2.CAP_PROP_GAIN, MANUAL_GAIN)
         print(f"Gain set to {MANUAL_GAIN}")
 
+    # Light-characterization sensor locks. Applied AFTER the low-light settings
+    # above so they are authoritative for a characterization run; a no-op unless
+    # the LOCK_* flags are enabled.
+    if LIGHT_CHAR_ENABLED:
+        apply_camera_locks(cap)
+
     actual_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     actual_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     actual_fps = cap.get(cv2.CAP_PROP_FPS)
@@ -124,6 +173,165 @@ def open_camera():
 
     cap.release()
     return None
+
+
+# ---------- Light-characterization helpers ----------
+
+def apply_camera_locks(cap):
+    """
+    Disable auto exposure/gain/white-balance and lock fixed values per the
+    LOCK_*/FIXED_* config, so light metrics are valid and comparable across frames.
+
+    Cameras frequently clamp or ignore requested values, so after setting each one
+    we READ IT BACK and print what actually stuck — that read-back is the value the
+    measurements were taken under, which is what belongs in the lab notes.
+    """
+    if LOCK_AUTO_EXPOSURE:
+        cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, AE_MANUAL_VALUE)
+        if FIXED_EXPOSURE != -1:
+            cap.set(cv2.CAP_PROP_EXPOSURE, FIXED_EXPOSURE)
+
+    if LOCK_AUTO_GAIN:
+        # No portable "auto gain off" flag; setting a fixed gain pins it on most
+        # backends. -1 means lock requested but no value given (left as-is).
+        if FIXED_GAIN != -1:
+            cap.set(cv2.CAP_PROP_GAIN, FIXED_GAIN)
+
+    if LOCK_AUTO_WB:
+        cap.set(cv2.CAP_PROP_AUTO_WB, 0)
+        if FIXED_WB_TEMP != -1:
+            cap.set(cv2.CAP_PROP_WB_TEMPERATURE, FIXED_WB_TEMP)
+
+    # Read-back: report the actual applied sensor state.
+    print("Light-characterization sensor locks (actual applied values):")
+    print(f"  AUTO_EXPOSURE : {cap.get(cv2.CAP_PROP_AUTO_EXPOSURE):.3f}  "
+          f"(locked={LOCK_AUTO_EXPOSURE})")
+    print(f"  EXPOSURE      : {cap.get(cv2.CAP_PROP_EXPOSURE):.3f}")
+    print(f"  GAIN          : {cap.get(cv2.CAP_PROP_GAIN):.3f}  "
+          f"(locked={LOCK_AUTO_GAIN})")
+    print(f"  AUTO_WB       : {cap.get(cv2.CAP_PROP_AUTO_WB):.3f}  "
+          f"(locked={LOCK_AUTO_WB})")
+    print(f"  WB_TEMPERATURE: {cap.get(cv2.CAP_PROP_WB_TEMPERATURE):.3f}")
+
+
+def luminance_channel(bgr: np.ndarray) -> np.ndarray:
+    """
+    Return a single-channel photometric brightness image from the COLOUR frame:
+    LAB L* (default) or YCrCb Y. NOT BGR2GRAY and NOT the CLAHE detection frame —
+    see the Light-characterization config note for why.
+    """
+    if LUMA_COLORSPACE == "YCRCB":
+        return cv2.cvtColor(bgr, cv2.COLOR_BGR2YCrCb)[:, :, 0]
+    return cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0]   # L*
+
+
+def marker_region_mask(shape, corner) -> np.ndarray:
+    """Boolean mask of the marker quad (from its 4 detected corners)."""
+    mask = np.zeros(shape[:2], dtype=np.uint8)
+    pts = corner[0].astype(np.int32)
+    cv2.fillConvexPoly(mask, pts, 255)
+    return mask.astype(bool)
+
+
+def channel_stats(bgr: np.ndarray, mask) -> dict:
+    """
+    Per-channel mean (B, G, R) and clipping fraction (pixels == 255) over the
+    masked region, or the full frame when mask is None. The clip fraction is an
+    over-exposure indicator: a rising value means that channel is saturating.
+    """
+    if mask is None:
+        region = bgr.reshape(-1, 3)
+    else:
+        region = bgr[mask]
+    if region.size == 0:
+        region = bgr.reshape(-1, 3)
+
+    means = region.mean(axis=0)                       # B, G, R
+    clip = (region == 255).mean(axis=0)               # fraction at 255 per channel
+    return {
+        "B_mean": float(means[0]), "G_mean": float(means[1]), "R_mean": float(means[2]),
+        "clip_frac_B": float(clip[0]),
+        "clip_frac_G": float(clip[1]),
+        "clip_frac_R": float(clip[2]),
+    }
+
+
+def michelson_contrast(luma: np.ndarray, corner) -> float | None:
+    """
+    Michelson contrast (I_white - I_black)/(I_white + I_black) inside the marker.
+
+    The marker is perspective-warped to a MARKER_GRID_CELLS square canonical grid
+    using its 4 detected corners. Each cell's centre is sampled (edges skipped to
+    avoid mixed-colour boundary pixels), cells are split into white/black sets by a
+    midpoint threshold, and I_white/I_black are the means of those sets. Using real
+    marker cells means the contrast reflects the printed black/white as the sensor
+    actually captured it. Returns None if it can't be computed.
+    """
+    n = MARKER_GRID_CELLS
+    cell_px = 12
+    size = n * cell_px
+    dst = np.array([[0, 0], [size - 1, 0], [size - 1, size - 1], [0, size - 1]],
+                   dtype=np.float32)
+    src = corner[0].astype(np.float32)
+
+    try:
+        H = cv2.getPerspectiveTransform(src, dst)
+        warped = cv2.warpPerspective(luma, H, (size, size))
+    except cv2.error:
+        return None
+
+    cell_means = []
+    pad = 3   # skip cell-edge pixels
+    for r in range(n):
+        for c in range(n):
+            patch = warped[r * cell_px + pad:(r + 1) * cell_px - pad,
+                           c * cell_px + pad:(c + 1) * cell_px - pad]
+            if patch.size:
+                cell_means.append(patch.mean())
+
+    if not cell_means:
+        return None
+
+    cell_means = np.array(cell_means, dtype=np.float64)
+    thr = (cell_means.min() + cell_means.max()) / 2.0
+    whites = cell_means[cell_means >= thr]
+    blacks = cell_means[cell_means < thr]
+    if whites.size == 0 or blacks.size == 0:
+        return None
+
+    i_white = whites.mean()
+    i_black = blacks.mean()
+    denom = i_white + i_black
+    if denom <= 0:
+        return None
+    return float((i_white - i_black) / denom)
+
+
+class CsvLogger:
+    """
+    Per-frame CSV writer. FIELDS is the single source of truth for the schema —
+    append a column name (e.g. "lux") here and pass it in the row dict; missing
+    keys are written blank, so extending the schema never breaks existing code.
+    """
+    FIELDS = [
+        "timestamp", "detected", "marker_id", "detect_mode",
+        "L_mean", "B_mean", "G_mean", "R_mean",
+        "clip_frac_B", "clip_frac_G", "clip_frac_R",
+        "michelson_contrast", "x", "y", "z",
+    ]
+
+    def __init__(self, path):
+        self._f = open(path, "w", newline="")
+        self._w = csv.DictWriter(self._f, fieldnames=self.FIELDS, extrasaction="ignore")
+        self._w.writeheader()
+        self._f.flush()
+
+    def write(self, row: dict):
+        self._w.writerow(row)
+        self._f.flush()   # flush per frame so a killed capture still has its data
+
+    def close(self):
+        self._f.close()
 
 
 def build_detector():
@@ -450,14 +658,29 @@ def main():
     )
     print("Press 'q' to quit.\n")
 
+    # Light-characterization CSV logger (separate measurement path; off => None).
+    csv_logger = CsvLogger(LIGHT_CSV_PATH) if LIGHT_CHAR_ENABLED else None
+    if csv_logger is not None:
+        print(f"Light characterization ON — logging per-frame metrics to "
+              f"{LIGHT_CSV_PATH}\n")
+
     try:
-        _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs)
+        _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs,
+                  csv_logger)
     finally:
         cap.release()
         cv2.destroyAllWindows()
+        if csv_logger is not None:
+            csv_logger.close()
 
 
-def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
+def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs,
+              csv_logger=None):
+    # Measured-loop-rate state: count frames between periodic FPS prints so we can
+    # see whether the added light-measurement processing is slowing the pipeline.
+    fps_count = 0
+    fps_t0 = time.time()
+
     while True:
         ret, frame = cap.read()
         if not ret or frame is None:
@@ -469,6 +692,10 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
 
         # Detection runs on the untouched 1-channel CLAHE image.
         corners, ids, detect_mode = detect_with_fallback(detector, gray_clahe)
+
+        # Smoothed pose per marker captured for the light-characterization CSV
+        # (additive only — does not affect detection/pose logic below).
+        frame_poses = {}
 
         # Display copy: promote CLAHE feed to 3-channel BGR so we can draw
         # colored overlays on it. The detector never sees this copy.
@@ -522,6 +749,7 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
                 cv2.drawFrameAxes(display, camera_matrix, dist_coeffs, rvec, tvec, 0.08)
 
                 x, y, z = tvec.flatten()
+                frame_poses[int(marker_id)] = (float(x), float(y), float(z))
                 validity_flag = "" if is_valid else " [rejected]"
                 # raw_z is this frame's measurement; z is the smoothed output —
                 # the gap between them is a direct readout of residual jitter.
@@ -557,6 +785,61 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
                         is_valid=is_valid,
                         detect_mode=detect_mode,
                     ))
+
+        # ----- Light-characterization measurement path (colour frame) -----
+        # Distinct from detection: operates on the original BGR `frame`, never on
+        # the grayscale/CLAHE detection feed. See LUMA_COLORSPACE note for why.
+        if csv_logger is not None:
+            detected = ids is not None and len(ids) > 0
+
+            # Pick the measured marker: prefer the landing pad, else the first
+            # detected marker, else none (full-frame fallback for the metrics).
+            meas_idx = None
+            meas_id = ""
+            if detected:
+                id_list = list(ids.flatten())
+                if LANDING_PAD_ID in id_list:
+                    meas_idx = id_list.index(LANDING_PAD_ID)
+                else:
+                    meas_idx = 0
+                meas_id = int(id_list[meas_idx])
+
+            # Region = marker quad when detected, else full frame.
+            mask = (marker_region_mask(frame.shape, corners[meas_idx])
+                    if meas_idx is not None else None)
+
+            luma = luminance_channel(frame)
+            l_mean = float(luma[mask].mean()) if mask is not None else float(luma.mean())
+            stats = channel_stats(frame, mask)
+
+            michelson = (michelson_contrast(luma, corners[meas_idx])
+                         if meas_idx is not None else None)
+
+            pose = frame_poses.get(meas_id) if meas_id != "" else None
+
+            row = {
+                "timestamp": time.time(),
+                "detected": detected,
+                "marker_id": meas_id,
+                "detect_mode": detect_mode if detected else "",
+                "L_mean": l_mean,
+                "michelson_contrast": "" if michelson is None else michelson,
+                "x": "" if pose is None else pose[0],
+                "y": "" if pose is None else pose[1],
+                "z": "" if pose is None else pose[2],
+            }
+            row.update(stats)
+            csv_logger.write(row)
+
+            # Measured loop rate — how fast the pipeline actually runs WITH the
+            # added measurement work. Printed every FPS_REPORT_INTERVAL seconds.
+            fps_count += 1
+            elapsed = time.time() - fps_t0
+            if elapsed >= FPS_REPORT_INTERVAL:
+                print(f"[light-char] measured loop rate: {fps_count / elapsed:.1f} FPS")
+                fps_count = 0
+                fps_t0 = time.time()
+        # -------------------------------------------------------------------
 
         cv2.putText(
             display,
