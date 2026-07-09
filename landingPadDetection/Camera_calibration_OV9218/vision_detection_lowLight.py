@@ -59,12 +59,38 @@ FALLBACK_EVERY_N = 3
 # pipeline rejects the GREY format and capture returns empty frames.
 NATIVE_GRAY = True
 
+# Detection resolution scale. detectMarkers cost scales with pixel count, and the
+# adaptive-threshold sweep dominates the frame budget on the Nano. Detecting on a
+# downscaled copy (0.5 = quarter the pixels) is the single biggest FPS win. We map
+# the corners back to full resolution and re-refine them with cornerSubPix on the
+# full-res image (see refine_corners_fullres), so pose accuracy is preserved — only
+# the coarse marker *search* runs at low res. 1.0 = detect at full res (old behavior).
+DETECT_SCALE = 0.5
+
+# V4L2 keeps a FIFO of driver buffers; at steady state the capture thread sits
+# several frames behind the sensor, which is the visible latency. Requesting a
+# 1-deep buffer makes the driver hand back the freshest frame instead of draining
+# a backlog. Not every V4L2 device honors it, but on the OV9281/Nano it noticeably
+# cuts glass-to-display delay. Set False to restore deep buffering (smoother FPS
+# graph, worse latency).
+LOW_LATENCY_BUFFER = True
+
 # imshow of a 1280x800 frame is one of the most expensive per-iteration costs on
 # a Jetson Nano and it adds display latency. Turn the preview off entirely for
 # max throughput (headless/flight), or show only every Nth frame. Pose output
 # and publish_pose() still run every frame regardless.
-SHOW_WINDOW = True
-SHOW_EVERY_N = 1
+# Keep this False for the lowest-latency bench/flight runs; enable only when you
+# explicitly want to inspect the preview window.
+SHOW_WINDOW = False
+SHOW_EVERY_N = 3
+# Downscale the preview before imshow — the GTK blit of a full 1280x800 image is a
+# top per-frame cost and adds display latency on the Nano. Detection/pose are
+# unaffected (this only touches what's drawn). 1.0 = show full size.
+DISPLAY_SCALE = 0.5
+
+# Printing to the terminal on every frame is surprisingly expensive and can add
+# visible lag to the real-time loop. Throttle pose output to every Nth frame.
+PRINT_POSE_EVERY_N = 30
 
 # Print per-block timings (preprocess/detect) every 30 frames to find the
 # bottleneck. Off by default so the console stays clean during normal runs.
@@ -121,11 +147,13 @@ def open_camera():
     if not cap.isOpened():
         return None
 
-    # NOTE: deliberately NOT forcing CAP_PROP_BUFFERSIZE=1 here. On V4L2 that
-    # single-buffers the driver and blocks DMA pipelining (lower FPS). Frame
-    # freshness is handled by the FrameGrabber thread draining to the latest
-    # frame instead, so we keep the default buffering and let capture overlap
-    # processing.
+    # Latency: the V4L2 driver FIFO fills faster than the loop drains it, and the
+    # FrameGrabber can only dequeue in order (one read per iteration), so it sits
+    # a few frames behind the sensor at steady state. Requesting a 1-deep buffer
+    # makes the driver hand back the freshest frame. See LOW_LATENCY_BUFFER for the
+    # FPS-vs-latency trade-off note.
+    if LOW_LATENCY_BUFFER:
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     # OV9281 is monochrome: grab the raw single-channel GREY stream and stop
     # OpenCV auto-expanding it to BGR. Saves a color conversion on capture (and
@@ -231,9 +259,13 @@ def build_detector():
     aruco_dict = aruco.getPredefinedDictionary(aruco_dict_id)
     params = aruco.DetectorParameters()
 
-    # Adaptive thresholding — wider range handles patchy shadows
+    # Adaptive thresholding — each window size in this range is a full-frame
+    # threshold pass, so the count directly sets detection cost. 3..53 step 10 is
+    # SIX passes; trimming to 3..23 step 10 (THREE passes) roughly halves the
+    # threshold stage while still covering small-to-mid window sizes that catch
+    # patchy shadows. Widen Max again if you lose markers under strong gradients.
     params.adaptiveThreshWinSizeMin = 3
-    params.adaptiveThreshWinSizeMax = 53
+    params.adaptiveThreshWinSizeMax = 23
     params.adaptiveThreshWinSizeStep = 10
     params.adaptiveThreshConstant = 7
 
@@ -243,9 +275,11 @@ def build_detector():
     # Bit-error tolerance — see ERROR_CORRECTION_RATE
     params.errorCorrectionRate = ERROR_CORRECTION_RATE
 
-    # Improve corner refinement accuracy
-    params.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
-    params.cornerRefinementWinSize = 5
+    # Corner refinement is done OUTSIDE the detector (refine_corners_fullres) on the
+    # full-resolution image, so the detector's own refinement — which would run on
+    # the downscaled search image and be thrown away — is disabled. This also lets
+    # the coarse search skip refinement entirely.
+    params.cornerRefinementMethod = aruco.CORNER_REFINE_NONE
 
     return aruco.ArucoDetector(aruco_dict, params)
 
@@ -360,6 +394,52 @@ def detect_with_fallback(detector, gray_clahe: np.ndarray, run_fallback: bool = 
     corners, ids, _ = detector.detectMarkers(adaptive)
 
     return corners, ids, "adaptive"
+
+
+_SUBPIX_CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01)
+
+
+def refine_corners_fullres(gray: np.ndarray, corners):
+    """
+    Refine marker corners to sub-pixel accuracy on the FULL-resolution image.
+
+    When DETECT_SCALE < 1 the marker search runs on a downscaled frame, so the
+    returned corners (after being scaled back up) are only accurate to ~1/scale
+    pixels — enough to jitter the pose. cornerSubPix snaps each corner to the true
+    intensity edge in the full-res image, recovering the precision we skipped in the
+    detector. Runs on the handful of detected corners only, so it's cheap.
+    """
+    refined = []
+    for corner in corners:
+        pts = corner.reshape(-1, 1, 2).astype(np.float32)
+        cv2.cornerSubPix(gray, pts, (5, 5), (-1, -1), _SUBPIX_CRITERIA)
+        refined.append(pts.reshape(1, 4, 2))
+    return refined
+
+
+def detect_scaled(detector, gray_clahe: np.ndarray, run_fallback: bool):
+    """
+    Run detection on a DETECT_SCALE copy of the CLAHE image, then map corners back
+    to full resolution and re-refine them there. Falls back to plain full-res
+    detection when DETECT_SCALE == 1.0.
+    """
+    if DETECT_SCALE == 1.0:
+        corners, ids, mode = detect_with_fallback(detector, gray_clahe, run_fallback)
+        if ids is not None and len(ids) > 0:
+            corners = refine_corners_fullres(gray_clahe, corners)
+        return corners, ids, mode
+
+    small = cv2.resize(
+        gray_clahe, None, fx=DETECT_SCALE, fy=DETECT_SCALE, interpolation=cv2.INTER_AREA
+    )
+    corners, ids, mode = detect_with_fallback(detector, small, run_fallback)
+
+    if ids is not None and len(ids) > 0:
+        inv = 1.0 / DETECT_SCALE
+        corners = [c * inv for c in corners]                 # small -> full-res coords
+        corners = refine_corners_fullres(gray_clahe, corners)  # recover sub-pixel edges
+
+    return corners, ids, mode
 
 
 def _rvec_to_quat(rvec: np.ndarray) -> np.ndarray:
@@ -561,6 +641,11 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
     misses = 0
     frame_count = 0
     last_seq = -1
+    # Rolling FPS of the processing loop (exponentially smoothed so it doesn't
+    # flicker frame-to-frame). Measured per processed frame, so it reflects real
+    # throughput after skipping duplicate captures.
+    fps = 0.0
+    prev_t = time.perf_counter()
     while True:
         frame, seq = grabber.read()
         # No new frame since last iteration: don't re-process the same image
@@ -578,6 +663,14 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
         frame_count += 1
         show = SHOW_WINDOW and (frame_count % SHOW_EVERY_N == 0)
 
+        # Update rolling FPS from the gap since the last processed frame.
+        now = time.perf_counter()
+        dt = now - prev_t
+        prev_t = now
+        if dt > 0:
+            inst_fps = 1.0 / dt
+            fps = inst_fps if fps == 0.0 else 0.9 * fps + 0.1 * inst_fps
+
         t0 = time.perf_counter()
         # With NATIVE_GRAY the frame already arrives single-channel; otherwise
         # it's BGR and needs converting. Handle both so the flag is safe to flip.
@@ -588,7 +681,7 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
         # Detection runs on the untouched 1-channel CLAHE image. Only spend the
         # adaptive fallback on the first marker-less frame and then every Nth.
         run_fallback = (misses % FALLBACK_EVERY_N == 0)
-        corners, ids, detect_mode = detect_with_fallback(
+        corners, ids, detect_mode = detect_scaled(
             detector, gray_clahe, run_fallback
         )
         t2 = time.perf_counter()
@@ -597,6 +690,7 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
 
         if PROFILE and frame_count % 30 == 0:
             print(
+                f"{fps:.1f} FPS  "
                 f"preprocess {(t1 - t0) * 1000:.1f}ms  "
                 f"detect {(t2 - t1) * 1000:.1f}ms  [{detect_mode}]"
             )
@@ -680,11 +774,12 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
                     )
 
                 if marker_id == LANDING_PAD_ID:
-                    print(
-                        f"LANDING PAD ID:{marker_id} "
-                        f"X:{x:+.3f}m Y:{y:+.3f}m Dist:{z:.3f}m (raw {raw_z:.3f}) "
-                        f"err:{reproj_error:.2f}px [{detect_mode}]{validity_flag}"
-                    )
+                    if PRINT_POSE_EVERY_N <= 1 or frame_count % PRINT_POSE_EVERY_N == 0:
+                        print(
+                            f"LANDING PAD ID:{marker_id} "
+                            f"X:{x:+.3f}m Y:{y:+.3f}m Dist:{z:.3f}m (raw {raw_z:.3f}) "
+                            f"err:{reproj_error:.2f}px [{detect_mode}]{validity_flag}"
+                        )
                     publish_pose(LandingPadPose(
                         marker_id=int(marker_id),
                         tvec=tvec,
@@ -697,7 +792,7 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
         if display is not None:
             cv2.putText(
                 display,
-                "Press q to quit",
+                f"{fps:.1f} FPS | q to quit",
                 (20, 35),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
@@ -705,6 +800,11 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
                 2,
                 cv2.LINE_AA,
             )
+            if DISPLAY_SCALE != 1.0:
+                display = cv2.resize(
+                    display, None, fx=DISPLAY_SCALE, fy=DISPLAY_SCALE,
+                    interpolation=cv2.INTER_AREA,
+                )
             cv2.imshow("CLAHE ArUco Detection (low-light)", display)
 
         if SHOW_WINDOW:
