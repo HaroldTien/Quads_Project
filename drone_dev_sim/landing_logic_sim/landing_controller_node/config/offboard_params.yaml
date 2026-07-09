@@ -1,0 +1,24 @@
+# Offboard control foundation (sub-task 1) tuning parameters.
+# Edit these and re-launch — no rebuild needed (the launch file loads this).
+#
+# The node name must match the node in code ('offboard_control_node').
+offboard_control_node:
+  ros__parameters:
+    # --- Setpoint pump ---
+    rate_hz: 20.0          # setpoint stream rate (MUST be >= 2 Hz for OFFBOARD)
+
+    # --- Takeoff / hold ---
+    target_alt: 2.0        # hover altitude (m, ENU up)
+    alt_tol: 0.15          # within this of target_alt = "reached" (m)
+
+    # --- Handshake ---
+    # auto_arm: auto-request OFFBOARD + arm. Convenient in SITL.
+    # Set FALSE on real hardware until bench-tested with props off.
+    auto_arm: true
+    warmup_s: 1.0          # stream setpoints this long before first OFFBOARD request
+    request_period_s: 2.0  # re-request OFFBOARD/arm this often until they stick
+
+    # --- Landing ---
+    # 0.0 = wait for the ~/land Trigger service.
+    # >0  = auto-land after holding this many seconds (hands-free SITL runs).
+    land_after_s: 0.0

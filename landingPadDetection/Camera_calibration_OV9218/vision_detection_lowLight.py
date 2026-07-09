@@ -1,3 +1,5 @@
+from __future__ import annotations  # allow "X | None" type hints on Python 3.9
+
 import cv2
 import cv2.aruco as aruco
 import numpy as np
