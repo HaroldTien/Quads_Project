@@ -13,7 +13,7 @@
 #   cmake -B build
 #   cmake --build build --target install_all
 #   cd ../PX4-Autopilot
-#   make px4_sitl 4052_gz_qav250
+#   make px4_sitl 4052_gz_s500
 #
 ############################################################################
 
@@ -32,11 +32,11 @@ endif()
 # Custom paths
 set(CUSTOM_MODEL_DIR "${DRONE_DEV_DIR}/model")
 set(CUSTOM_AIRFRAME_DIR "${DRONE_DEV_DIR}/airframes")
-# Model name must match what PX4 extracts from airframe filename (4052_gz_qav250 -> qav250)
-# PX4 sets PX4_SIM_MODEL=gz_qav250, and Gazebo looks for "qav250" directory (without gz_ prefix)
-set(CUSTOM_MODEL_NAME "qav250")
-set(CUSTOM_AIRFRAME_SOURCE "4052_holybro_qav250_sim.sh")
-set(CUSTOM_AIRFRAME_DEST "4052_gz_qav250")
+# Model name must match what PX4 extracts from airframe filename (4052_gz_s500 -> s500)
+# PX4 sets PX4_SIM_MODEL=gz_s500, and Gazebo looks for "s500" directory (without gz_ prefix)
+set(CUSTOM_MODEL_NAME "s500")
+set(CUSTOM_AIRFRAME_SOURCE "4052_holybro_s500_sim.sh")
+set(CUSTOM_AIRFRAME_DEST "4052_gz_s500")
 
 # PX4 paths
 set(PX4_AIRFRAME_DIR "${PX4_DIR}/ROMFS/px4fmu_common/init.d-posix/airframes")
@@ -103,9 +103,9 @@ if(NOT MAKE_COMMAND)
     message(FATAL_ERROR "make command not found. Please install make.")
 endif()
 
-# Extract model name from airframe filename (e.g., 4052_gz_qav250 -> qav250)
+# Extract model name from airframe filename (e.g., 4052_gz_s500 -> s500)
 # This matches PX4's CMakeLists.txt logic: string(REGEX REPLACE ".*_gz_" "" model_name ${gz_airframe})
-set(AIRFRAME_MODEL_NAME "qav250")
+set(AIRFRAME_MODEL_NAME "s500")
 
 # Build PX4 SITL (only build, don't run)
 add_custom_target(build_px4

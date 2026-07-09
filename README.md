@@ -1,11 +1,11 @@
 # Quads Project
 
 End-to-end development environment for an autonomous quadcopter (Holybro
-QAV250 class airframe) that finds an ArUco landing pad and lands on it. The
+S500 class airframe) that finds an ArUco landing pad and lands on it. The
 project glues together three layers:
 
 1. **Flight stack** — PX4-Autopilot with a matching Gazebo SITL setup for a
-   custom QAV250 airframe (`drone_dev_sim/`).
+   custom S500 airframe (`drone_dev_sim/`).
 2. **Perception + control stack** — a ROS 2 workspace running on a Jetson
    Orin Nano companion computer: a CSI camera publisher, an ArUco marker
    detector tuned for low light, and a precision-landing controller that
@@ -50,8 +50,8 @@ Quads_Project/
 │           └── test/test_controller.py
 ├── drone_dev_sim/              # PX4 SITL (Gazebo) configuration
 │   ├── CMakeLists.txt          # Copies model+airframe into PX4 and launches SITL
-│   ├── airframes/4052_holybro_qav250_sim.sh    # QAV250 airframe for Gazebo
-│   └── model/                  # Custom Gazebo model (qav250)
+│   ├── airframes/4052_holybro_s500_sim.sh    # S500 airframe for Gazebo
+│   └── model/                  # Custom Gazebo model (s500)
 │       ├── model.sdf
 │       ├── model.config
 │       └── meshes/ thumbnails/
@@ -84,14 +84,14 @@ Quads_Project/
 
 ### 1. PX4 SITL / Gazebo — `drone_dev_sim/`
 
-Creates a custom Gazebo airframe `4052_gz_qav250` that combines:
+Creates a custom Gazebo airframe `4052_gz_s500` that combines:
 
-- **Hardware tuning** from the real QAV250 setup (PID gains, IMU filters,
-  thrust model, rotor geometry, etc. — based on `4052_holybro_qav250`)
+- **Hardware tuning** from the real S500 setup (PID gains, IMU filters,
+  thrust model, rotor geometry, etc. — based on `4052_holybro_s500`)
 - **Gazebo wiring** from `4006_gz_px4vision` (EKF2, optical flow, MAVLink
   rates, `SIM_GZ_EC_*` actuators)
 
-A custom `qav250` Gazebo model is provided. The CMake target chain
+A custom `s500` Gazebo model is provided. The CMake target chain
 (`setup_airframe`, `setup_model`, `clean_px4_for_reconfig`, `setup`,
 `build_px4`, `run_simulation`, `clean_setup`, `clean_px4`) copies these files
 into the correct PX4 directories and forces a reconfigure when the airframe
@@ -99,17 +99,17 @@ list changes.
 
 | Component | Source | Destination in PX4 |
 |-----------|--------|--------------------|
-| Airframe | `drone_dev_sim/airframes/4052_holybro_qav250_sim.sh` | `PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250` |
-| Model    | `drone_dev_sim/model/` | `PX4-Autopilot/Tools/simulation/gz/models/qav250/` |
+| Airframe | `drone_dev_sim/airframes/4052_holybro_s500_sim.sh` | `PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_s500` |
+| Model    | `drone_dev_sim/model/` | `PX4-Autopilot/Tools/simulation/gz/models/s500/` |
 
 #### Naming convention
 
-- Airframe filename `4052_gz_qav250`:
+- Airframe filename `4052_gz_s500`:
   - `4052` → `SYS_AUTOSTART` ID (same as hardware)
   - `gz` → Gazebo simulator selector
-  - `qav250` → model name PX4 extracts from the filename
-- PX4 target: `gz_qav250` (used with `make px4_sitl gz_qav250`)
-- Gazebo model directory: `qav250` (PX4 sets `PX4_SIM_MODEL=gz_qav250`, and
+  - `s500` → model name PX4 extracts from the filename
+- PX4 target: `gz_s500` (used with `make px4_sitl gz_s500`)
+- Gazebo model directory: `s500` (PX4 sets `PX4_SIM_MODEL=gz_s500`, and
   Gazebo searches for the directory **without** the `gz_` prefix)
 
 ### 2. ROS 2 Workspace — `drone_dev/src/`
@@ -268,12 +268,12 @@ Available targets:
 |--------|-------------|
 | `make setup` | Copy custom model + airframe into PX4 and force reconfigure |
 | `make build_px4` | Build PX4 SITL firmware only |
-| `make run_simulation` | Build and launch Gazebo with the QAV250 |
+| `make run_simulation` | Build and launch Gazebo with the S500 |
 | `make clean_setup` | Remove the custom files from PX4 |
 | `make clean_px4` | Remove the PX4 SITL build directory |
 
 Equivalently, after `make setup` you can run PX4 directly:
-`cd ../PX4-Autopilot && make px4_sitl gz_qav250`.
+`cd ../PX4-Autopilot && make px4_sitl gz_s500`.
 
 On real hardware, set `SYS_AUTOSTART=4052` in QGroundControl so the same
 tuning parameters load.

@@ -1,10 +1,8 @@
 #!/bin/sh
 #
-# @name HolyBro QAV250 SITL (Gazebo)
-# Combined airframe: QAV250 tuning parameters with Gazebo simulation
-# Based on: 4052_holybro_qav250 (hardware) + 4006_gz_px4vision (simulation)
-#
-# @url https://docs.px4.io/main/en/frames_multicopter/holybro_qav250_pixhawk4_mini.html
+# @name HolyBro S500 SITL (Gazebo)
+# Combined airframe: S500 tuning parameters with Gazebo simulation
+# Based on: 4052_holybro_s500 (hardware) + 4006_gz_px4vision (simulation)
 #
 # @type Quadrotor x
 # @class Copter
@@ -15,9 +13,9 @@
 # Gazebo Simulation Configuration
 PX4_SIMULATOR=${PX4_SIMULATOR:=gz}
 PX4_GZ_WORLD=${PX4_GZ_WORLD:=default}
-# Note: PX4's CMakeLists.txt will override this with PX4_SIM_MODEL=gz_qav250
-# Gazebo will look for "qav250" directory (without gz_ prefix)
-PX4_SIM_MODEL=${PX4_SIM_MODEL:=qav250}
+# Note: PX4's CMakeLists.txt will override this with PX4_SIM_MODEL=gz_s500
+# Gazebo will look for "s500" directory (without gz_ prefix)
+PX4_SIM_MODEL=${PX4_SIM_MODEL:=s500}
 
 param set-default SIM_GZ_EN 1
 
@@ -50,7 +48,7 @@ param set-default EKF2_PCOEF_YP -0.55
 param set-default MAV_1_RATE 80000
 param set-default MAV_1_MODE 9
 
-# Vehicle attitude PID tuning (from QAV250 - optimized for real hardware)
+# Vehicle attitude PID tuning (from S500 - optimized for real hardware)
 param set-default MC_AIRMODE 1
 param set-default MC_PITCHRATE_D 0.0012
 param set-default MC_PITCHRATE_I 0.35
@@ -72,7 +70,7 @@ param set-default MC_ACRO_P_MAX 200
 param set-default MC_ACRO_R_MAX 200
 param set-default MC_ACRO_Y_MAX 150
 
-# Position Control Tuning (mixed: QAV250 for hover, gz_px4vision for other)
+# Position Control Tuning (mixed: S500 for hover, gz_px4vision for other)
 param set-default CP_DIST 6
 param set-default MPC_ACC_DOWN_MAX 5
 param set-default MPC_ACC_HOR_MAX 10
@@ -107,7 +105,7 @@ param set-default SDLOG_PROFILE 131
 param set-default SENS_FLOW_MAXHGT 25
 param set-default SENS_FLOW_MINHGT 0.5
 
-# IMU Parameters (from QAV250 - optimized for real hardware)
+# IMU Parameters (from S500 - optimized for real hardware)
 param set-default IMU_GYRO_CUTOFF 120
 param set-default IMU_DGYRO_CUTOFF 45
 
