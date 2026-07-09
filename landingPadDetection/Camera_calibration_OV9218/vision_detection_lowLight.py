@@ -4,6 +4,7 @@ import cv2
 import cv2.aruco as aruco
 import numpy as np
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,7 +34,7 @@ CLAHE_TILE_SIZE = (8, 8)
 # Edge-preserving denoise on the CLAHE output before detection. CLAHE amplifies
 # sensor grain, which wobbles the detected corners frame-to-frame; bilateral
 # filtering suppresses that noise while keeping marker edges crisp.
-DENOISE = True
+DENOISE = False
 DENOISE_DIAMETER = 5        # bilateral neighborhood diameter (pixels)
 DENOISE_SIGMA_COLOR = 50    # intensity sigma
 DENOISE_SIGMA_SPACE = 50    # spatial sigma
@@ -43,6 +44,32 @@ DENOISE_SIGMA_SPACE = 50    # spatial sigma
 MANUAL_EXPOSURE = -1       # e.g. 100 (ms*10 on V4L2). -1 = auto
 MANUAL_GAIN = -1           # e.g. 200. -1 = auto
 # ------------------------------------
+
+# -------- Performance (Jetson Nano) --------
+# The adaptive-threshold fallback pass roughly doubles detection cost, and on a
+# marker-less frame the CLAHE pass fails and we pay for the fallback every frame
+# for nothing. Instead, only run the fallback once every Nth marker-less frame,
+# so the common no-marker case isn't paying double continuously. 1 = every frame
+# (old behavior); 3 = at most once per 3 marker-less frames.
+FALLBACK_EVERY_N = 3
+
+# OV9281 is a monochrome sensor. Capture its raw 1-channel stream instead of
+# letting V4L2/OpenCV expand it to BGR and then converting back to gray — that
+# removes two full-frame conversions per frame on the Nano. Set False if your
+# pipeline rejects the GREY format and capture returns empty frames.
+NATIVE_GRAY = True
+
+# imshow of a 1280x800 frame is one of the most expensive per-iteration costs on
+# a Jetson Nano and it adds display latency. Turn the preview off entirely for
+# max throughput (headless/flight), or show only every Nth frame. Pose output
+# and publish_pose() still run every frame regardless.
+SHOW_WINDOW = True
+SHOW_EVERY_N = 1
+
+# Print per-block timings (preprocess/detect) every 30 frames to find the
+# bottleneck. Off by default so the console stays clean during normal runs.
+PROFILE = False
+# -------------------------------------------
 
 # -------- Detector tuning --------
 # Lower = detects smaller/farther markers, but tiny markers have noisy corners
@@ -94,6 +121,20 @@ def open_camera():
     if not cap.isOpened():
         return None
 
+    # NOTE: deliberately NOT forcing CAP_PROP_BUFFERSIZE=1 here. On V4L2 that
+    # single-buffers the driver and blocks DMA pipelining (lower FPS). Frame
+    # freshness is handled by the FrameGrabber thread draining to the latest
+    # frame instead, so we keep the default buffering and let capture overlap
+    # processing.
+
+    # OV9281 is monochrome: grab the raw single-channel GREY stream and stop
+    # OpenCV auto-expanding it to BGR. Saves a color conversion on capture (and
+    # the BGR->GRAY convert in the loop). See NATIVE_GRAY.
+    if NATIVE_GRAY:
+        grey_fourcc = ord("G") | (ord("R") << 8) | (ord("E") << 16) | (ord("Y") << 24)
+        cap.set(cv2.CAP_PROP_FOURCC, grey_fourcc)
+        cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)
+
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
     cap.set(cv2.CAP_PROP_FPS, FPS)
@@ -126,6 +167,50 @@ def open_camera():
 
     cap.release()
     return None
+
+
+class FrameGrabber:
+    """
+    Background capture thread that keeps ONLY the most recent frame.
+
+    Perceived lag comes from the driver frame queue filling up faster than the
+    processing loop drains it (CAP_PROP_BUFFERSIZE=1 is ignored on macOS
+    AVFoundation and often on V4L2). This thread reads flat-out and discards
+    stale frames, so the main loop always processes the freshest frame and never
+    falls behind — latency stays bounded to a single frame regardless of how
+    slow detection is. A monotonically increasing `seq` lets the loop skip a
+    frame it already processed instead of burning cycles re-detecting it.
+    """
+
+    def __init__(self, cap):
+        self.cap = cap
+        self._lock = threading.Lock()
+        self._frame = None
+        self._seq = 0
+        self._running = True
+        self._thread = threading.Thread(target=self._reader, daemon=True)
+        self._thread.start()
+
+    def _reader(self):
+        while self._running:
+            ret, frame = self.cap.read()
+            if not ret or frame is None:
+                continue
+            # read() allocates a fresh buffer each call, so rebinding here never
+            # clobbers a frame the main loop is still holding a reference to.
+            with self._lock:
+                self._frame = frame
+                self._seq += 1
+
+    def read(self):
+        """Return (frame, seq) for the latest frame, or (None, seq) if none yet."""
+        with self._lock:
+            return self._frame, self._seq
+
+    def stop(self):
+        self._running = False
+        self._thread.join(timeout=1.0)
+        self.cap.release()
 
 
 def build_detector():
@@ -243,17 +328,25 @@ def preprocess_frame(gray: np.ndarray, clahe) -> np.ndarray:
     return enhanced
 
 
-def detect_with_fallback(detector, gray_clahe: np.ndarray):
+def detect_with_fallback(detector, gray_clahe: np.ndarray, run_fallback: bool = True):
     """
     Two-pass detection:
       Pass 1: CLAHE-enhanced grayscale (handles most low-light cases)
       Pass 2: Adaptive threshold on top of CLAHE (handles extreme shadows/hotspots)
     Returns corners, ids from whichever pass succeeds first.
+
+    The second pass is expensive, so `run_fallback=False` skips it — the caller
+    throttles it (see FALLBACK_EVERY_N) so marker-less frames don't pay double
+    every single frame. detect_mode is "none" when pass 1 fails and the fallback
+    is skipped.
     """
     corners, ids, rejected = detector.detectMarkers(gray_clahe)
 
     if ids is not None and len(ids) > 0:
         return corners, ids, "clahe"
+
+    if not run_fallback:
+        return corners, ids, "none"
 
     # Fallback: binarise with adaptive threshold to crush uneven shadows
     adaptive = cv2.adaptiveThreshold(
@@ -452,32 +545,70 @@ def main():
     )
     print("Press 'q' to quit.\n")
 
+    # Capture runs in its own thread so the loop always gets the freshest frame.
+    grabber = FrameGrabber(cap)
+
     try:
-        _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs)
+        _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs)
     finally:
-        cap.release()
+        grabber.stop()
         cv2.destroyAllWindows()
 
 
-def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
+def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
+    # Counts consecutive marker-less frames so we only pay for the expensive
+    # adaptive fallback once every FALLBACK_EVERY_N of them.
+    misses = 0
+    frame_count = 0
+    last_seq = -1
     while True:
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            print("Warning: dropped frame.")
+        frame, seq = grabber.read()
+        # No new frame since last iteration: don't re-process the same image
+        # (wastes CPU). Service the GUI if shown, else back off briefly so we
+        # don't spin a core hot waiting for the next capture.
+        if frame is None or seq == last_seq:
+            if SHOW_WINDOW:
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+            else:
+                time.sleep(0.001)
             continue
+        last_seq = seq
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame_count += 1
+        show = SHOW_WINDOW and (frame_count % SHOW_EVERY_N == 0)
+
+        t0 = time.perf_counter()
+        # With NATIVE_GRAY the frame already arrives single-channel; otherwise
+        # it's BGR and needs converting. Handle both so the flag is safe to flip.
+        gray = frame if frame.ndim == 2 else cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray_clahe = preprocess_frame(gray, clahe)
+        t1 = time.perf_counter()
 
-        # Detection runs on the untouched 1-channel CLAHE image.
-        corners, ids, detect_mode = detect_with_fallback(detector, gray_clahe)
+        # Detection runs on the untouched 1-channel CLAHE image. Only spend the
+        # adaptive fallback on the first marker-less frame and then every Nth.
+        run_fallback = (misses % FALLBACK_EVERY_N == 0)
+        corners, ids, detect_mode = detect_with_fallback(
+            detector, gray_clahe, run_fallback
+        )
+        t2 = time.perf_counter()
+
+        misses = 0 if (ids is not None and len(ids) > 0) else misses + 1
+
+        if PROFILE and frame_count % 30 == 0:
+            print(
+                f"preprocess {(t1 - t0) * 1000:.1f}ms  "
+                f"detect {(t2 - t1) * 1000:.1f}ms  [{detect_mode}]"
+            )
 
         # Display copy: promote CLAHE feed to 3-channel BGR so we can draw
-        # colored overlays on it. The detector never sees this copy.
-        display = cv2.cvtColor(gray_clahe, cv2.COLOR_GRAY2BGR)
+        # colored overlays on it. Built only when we're actually showing this
+        # frame — the GRAY2BGR + imshow is a top cost on the Nano.
+        display = cv2.cvtColor(gray_clahe, cv2.COLOR_GRAY2BGR) if show else None
 
         if ids is not None and len(ids) > 0:
-            aruco.drawDetectedMarkers(display, corners, ids)
+            if display is not None:
+                aruco.drawDetectedMarkers(display, corners, ids)
 
             rvecs, tvecs, reproj_errors = estimate_pose_markers(
                 corners, camera_matrix, dist_coeffs
@@ -497,17 +628,18 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
                     or not np.all(np.isfinite(tvec))
                     or reproj_error > MAX_REPROJ_ERROR_PX
                 ):
-                    p = corners[i][0][0].astype(int)
-                    cv2.putText(
-                        display,
-                        f"ID:{marker_id} [bad pose] err:{reproj_error:.1f}px",
-                        (p[0], max(25, p[1] - 10)),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.55,
-                        (0, 0, 255),
-                        2,
-                        cv2.LINE_AA,
-                    )
+                    if display is not None:
+                        p = corners[i][0][0].astype(int)
+                        cv2.putText(
+                            display,
+                            f"ID:{marker_id} [bad pose] err:{reproj_error:.1f}px",
+                            (p[0], max(25, p[1] - 10)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.55,
+                            (0, 0, 255),
+                            2,
+                            cv2.LINE_AA,
+                        )
                     continue
 
                 # Initialize filter for this marker if first detection
@@ -521,29 +653,31 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
                 # Apply temporal smoothing and outlier rejection
                 tvec, rvec, is_valid = pose_filters[marker_id].update(tvec, rvec)
 
-                cv2.drawFrameAxes(display, camera_matrix, dist_coeffs, rvec, tvec, 0.08)
-
                 x, y, z = tvec.flatten()
                 validity_flag = "" if is_valid else " [rejected]"
-                # raw_z is this frame's measurement; z is the smoothed output —
-                # the gap between them is a direct readout of residual jitter.
-                label = (
-                    f"ID:{marker_id} X:{x:+.2f} Y:{y:+.2f} Z:{z:.2f}m "
-                    f"(raw {raw_z:.2f}) err:{reproj_error:.1f}px "
-                    f"[{detect_mode}]{validity_flag}"
-                )
 
-                p = corners[i][0][0].astype(int)
-                cv2.putText(
-                    display,
-                    label,
-                    (p[0], max(25, p[1] - 10)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.55,
-                    (0, 255, 0) if marker_id == LANDING_PAD_ID else (0, 200, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
+                if display is not None:
+                    cv2.drawFrameAxes(display, camera_matrix, dist_coeffs, rvec, tvec, 0.08)
+
+                    # raw_z is this frame's measurement; z is the smoothed output
+                    # — the gap between them is a direct readout of residual jitter.
+                    label = (
+                        f"ID:{marker_id} X:{x:+.2f} Y:{y:+.2f} Z:{z:.2f}m "
+                        f"(raw {raw_z:.2f}) err:{reproj_error:.1f}px "
+                        f"[{detect_mode}]{validity_flag}"
+                    )
+
+                    p = corners[i][0][0].astype(int)
+                    cv2.putText(
+                        display,
+                        label,
+                        (p[0], max(25, p[1] - 10)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.55,
+                        (0, 255, 0) if marker_id == LANDING_PAD_ID else (0, 200, 255),
+                        2,
+                        cv2.LINE_AA,
+                    )
 
                 if marker_id == LANDING_PAD_ID:
                     print(
@@ -560,20 +694,22 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
                         detect_mode=detect_mode,
                     ))
 
-        cv2.putText(
-            display,
-            "Press q to quit",
-            (20, 35),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (255, 255, 255),
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.imshow("CLAHE ArUco Detection (low-light)", display)
+        if display is not None:
+            cv2.putText(
+                display,
+                "Press q to quit",
+                (20, 35),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
+            cv2.imshow("CLAHE ArUco Detection (low-light)", display)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        if SHOW_WINDOW:
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
 
 
 

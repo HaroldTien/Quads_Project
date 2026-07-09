@@ -1,5 +1,5 @@
 # test/test_controller.py
-from landing_controller.controller import LandingController, camera_to_enu
+from drone_dev_sim.landing_logic_sim.landing_controller_node.landing_controller.controller import LandingController, camera_to_enu
 import numpy as np
 
 def test_marker_to_the_right_moves_east():
