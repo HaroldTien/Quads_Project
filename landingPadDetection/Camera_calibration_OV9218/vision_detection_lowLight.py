@@ -1,4 +1,4 @@
-from __future__ import annotations  # allow "X | None" type hints on Python 3.9
+from __future__ import annotations  
 
 import cv2
 import cv2.aruco as aruco
@@ -9,22 +9,19 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from pose_filter import PoseFilter
+
 
 # -------- User settings --------
 MARKER_SIZE_METERS = 0.20   # 20 cm marker side length
 LANDING_PAD_ID = 0
 # 5x5 family options: 50, 100, 250, 1000
 ARUCO_DICT_NAME = "DICT_5X5_50"
-# Index 0 = Arducam OV9281 (works on Jetson/V4L2, but NOT on macOS — its mono
-# format won't negotiate with AVFoundation, so reads hang). For macOS bench
-# testing use index 1 = built-in MacBook camera. Revert to 0 for the Jetson/OV9281.
-# NOTE: built-in cam intrinsics differ from the OV9281 calibration files, so the
-# metric distance (Z) will be wrong here — detection/jitter/flip behavior is still valid.
+
 CAMERA_INDEX = 0
-FRAME_WIDTH = 1280
-FRAME_HEIGHT = 800
+FRAME_WIDTH = 640
+FRAME_HEIGHT = 480
 FPS = 30
-# ------------------------------
 
 # -------- Low-light settings --------
 # CLAHE parameters — increase clipLimit for more aggressive contrast boost
@@ -43,66 +40,17 @@ DENOISE_SIGMA_SPACE = 50    # spatial sigma
 # Set to -1 to leave at OS default (safe fallback)
 MANUAL_EXPOSURE = -1       # e.g. 100 (ms*10 on V4L2). -1 = auto
 MANUAL_GAIN = -1           # e.g. 200. -1 = auto
-# ------------------------------------
-
-# -------- Performance (Jetson Nano) --------
-# The adaptive-threshold fallback pass roughly doubles detection cost, and on a
-# marker-less frame the CLAHE pass fails and we pay for the fallback every frame
-# for nothing. Instead, only run the fallback once every Nth marker-less frame,
-# so the common no-marker case isn't paying double continuously. 1 = every frame
-# (old behavior); 3 = at most once per 3 marker-less frames.
 FALLBACK_EVERY_N = 3
-
-# OV9281 is a monochrome sensor. Capture its raw 1-channel stream instead of
-# letting V4L2/OpenCV expand it to BGR and then converting back to gray — that
-# removes two full-frame conversions per frame on the Nano. Set False if your
-# pipeline rejects the GREY format and capture returns empty frames.
-NATIVE_GRAY = True
-
-# Detection resolution scale. detectMarkers cost scales with pixel count, and the
-# adaptive-threshold sweep dominates the frame budget on the Nano. Detecting on a
-# downscaled copy (0.5 = quarter the pixels) is the single biggest FPS win. We map
-# the corners back to full resolution and re-refine them with cornerSubPix on the
-# full-res image (see refine_corners_fullres), so pose accuracy is preserved — only
-# the coarse marker *search* runs at low res. 1.0 = detect at full res (old behavior).
+NATIVE_GRAY = False
 DETECT_SCALE = 0.5
-
-# V4L2 keeps a FIFO of driver buffers; at steady state the capture thread sits
-# several frames behind the sensor, which is the visible latency. Requesting a
-# 1-deep buffer makes the driver hand back the freshest frame instead of draining
-# a backlog. Not every V4L2 device honors it, but on the OV9281/Nano it noticeably
-# cuts glass-to-display delay. Set False to restore deep buffering (smoother FPS
-# graph, worse latency).
 LOW_LATENCY_BUFFER = True
-
-# imshow of a 1280x800 frame is one of the most expensive per-iteration costs on
-# a Jetson Nano and it adds display latency. Turn the preview off entirely for
-# max throughput (headless/flight), or show only every Nth frame. Pose output
-# and publish_pose() still run every frame regardless.
-# Keep this False for the lowest-latency bench/flight runs; enable only when you
-# explicitly want to inspect the preview window.
 SHOW_WINDOW = False
 SHOW_EVERY_N = 3
-# Downscale the preview before imshow — the GTK blit of a full 1280x800 image is a
-# top per-frame cost and adds display latency on the Nano. Detection/pose are
-# unaffected (this only touches what's drawn). 1.0 = show full size.
 DISPLAY_SCALE = 0.5
-
-# Printing to the terminal on every frame is surprisingly expensive and can add
-# visible lag to the real-time loop. Throttle pose output to every Nth frame.
 PRINT_POSE_EVERY_N = 30
-
-# Print per-block timings (preprocess/detect) every 30 frames to find the
-# bottleneck. Off by default so the console stays clean during normal runs.
 PROFILE = False
-# -------------------------------------------
-
-# -------- Detector tuning --------
-# Lower = detects smaller/farther markers, but tiny markers have noisy corners
-# (jittery pose). Moderate value trades a little reach for stability.
 MIN_MARKER_PERIMETER_RATE = 0.05
-# Higher = tolerates more bit errors (helps in noise) but admits marginal/false
-# reads. Moderate value keeps low-light tolerance without inviting noisy detections.
+
 ERROR_CORRECTION_RATE = 0.5
 # ---------------------------------
 
@@ -198,17 +146,6 @@ def open_camera():
 
 
 class FrameGrabber:
-    """
-    Background capture thread that keeps ONLY the most recent frame.
-
-    Perceived lag comes from the driver frame queue filling up faster than the
-    processing loop drains it (CAP_PROP_BUFFERSIZE=1 is ignored on macOS
-    AVFoundation and often on V4L2). This thread reads flat-out and discards
-    stale frames, so the main loop always processes the freshest frame and never
-    falls behind — latency stays bounded to a single frame regardless of how
-    slow detection is. A monotonically increasing `seq` lets the loop skip a
-    frame it already processed instead of burning cycles re-detecting it.
-    """
 
     def __init__(self, cap):
         self.cap = cap
@@ -216,14 +153,23 @@ class FrameGrabber:
         self._frame = None
         self._seq = 0
         self._running = True
+        
+        self.capture_fps = 0.0
         self._thread = threading.Thread(target=self._reader, daemon=True)
         self._thread.start()
 
     def _reader(self):
+        prev = time.perf_counter()
         while self._running:
             ret, frame = self.cap.read()
             if not ret or frame is None:
                 continue
+            now = time.perf_counter()
+            gap = now - prev
+            prev = now
+            if gap > 0:
+                inst = 1.0 / gap
+                self.capture_fps = inst if self.capture_fps == 0.0 else 0.9 * self.capture_fps + 0.1 * inst
             # read() allocates a fresh buffer each call, so rebinding here never
             # clobbers a frame the main loop is still holding a reference to.
             with self._lock:
@@ -262,8 +208,7 @@ def build_detector():
     # Adaptive thresholding — each window size in this range is a full-frame
     # threshold pass, so the count directly sets detection cost. 3..53 step 10 is
     # SIX passes; trimming to 3..23 step 10 (THREE passes) roughly halves the
-    # threshold stage while still covering small-to-mid window sizes that catch
-    # patchy shadows. Widen Max again if you lose markers under strong gradients.
+
     params.adaptiveThreshWinSizeMin = 3
     params.adaptiveThreshWinSizeMax = 23
     params.adaptiveThreshWinSizeStep = 10
@@ -274,32 +219,12 @@ def build_detector():
 
     # Bit-error tolerance — see ERROR_CORRECTION_RATE
     params.errorCorrectionRate = ERROR_CORRECTION_RATE
-
-    # Corner refinement is done OUTSIDE the detector (refine_corners_fullres) on the
-    # full-resolution image, so the detector's own refinement — which would run on
-    # the downscaled search image and be thrown away — is disabled. This also lets
-    # the coarse search skip refinement entirely.
     params.cornerRefinementMethod = aruco.CORNER_REFINE_NONE
 
     return aruco.ArucoDetector(aruco_dict, params)
 
 
 def estimate_pose_markers(corners, camera_matrix, dist_coeffs):
-    """
-    Estimate per-marker pose, resolving the planar (mirror) ambiguity.
-
-    SOLVEPNP_IPPE_SQUARE yields two valid solutions for a planar square; solvePnP
-    silently returns one, which is why the pose sometimes flips to a "behind the
-    camera" mirror (negative Z). solvePnPGeneric returns BOTH solutions plus their
-    reprojection errors, so we can deliberately keep the physically valid one.
-
-    Selection rule: prefer the solution with positive Z (marker in front of the
-    camera); among valid candidates pick the lowest reprojection error. Falls back
-    to lowest reprojection error if neither has positive Z.
-
-    Returns (rvecs, tvecs, reproj_errors) — reproj_errors is per-marker pixels, used
-    downstream to gate out unreliable solves.
-    """
     marker_size = MARKER_SIZE_METERS
     rvecs = []
     tvecs = []
@@ -349,11 +274,6 @@ def estimate_pose_markers(corners, camera_matrix, dist_coeffs):
 
 
 def preprocess_frame(gray: np.ndarray, clahe) -> np.ndarray:
-    """
-    Apply CLAHE to equalise contrast locally — core fix for shadows. Optionally
-    follow with an edge-preserving bilateral filter to suppress the sensor grain
-    CLAHE amplifies (a major source of corner/pose jitter in low light).
-    """
     enhanced = clahe.apply(gray)
     if DENOISE:
         enhanced = cv2.bilateralFilter(
@@ -400,15 +320,6 @@ _SUBPIX_CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01
 
 
 def refine_corners_fullres(gray: np.ndarray, corners):
-    """
-    Refine marker corners to sub-pixel accuracy on the FULL-resolution image.
-
-    When DETECT_SCALE < 1 the marker search runs on a downscaled frame, so the
-    returned corners (after being scaled back up) are only accurate to ~1/scale
-    pixels — enough to jitter the pose. cornerSubPix snaps each corner to the true
-    intensity edge in the full-res image, recovering the precision we skipped in the
-    detector. Runs on the handful of detected corners only, so it's cheap.
-    """
     refined = []
     for corner in corners:
         pts = corner.reshape(-1, 1, 2).astype(np.float32)
@@ -418,11 +329,7 @@ def refine_corners_fullres(gray: np.ndarray, corners):
 
 
 def detect_scaled(detector, gray_clahe: np.ndarray, run_fallback: bool):
-    """
-    Run detection on a DETECT_SCALE copy of the CLAHE image, then map corners back
-    to full resolution and re-refine them there. Falls back to plain full-res
-    detection when DETECT_SCALE == 1.0.
-    """
+    
     if DETECT_SCALE == 1.0:
         corners, ids, mode = detect_with_fallback(detector, gray_clahe, run_fallback)
         if ids is not None and len(ids) > 0:
@@ -442,142 +349,8 @@ def detect_scaled(detector, gray_clahe: np.ndarray, run_fallback: bool):
     return corners, ids, mode
 
 
-def _rvec_to_quat(rvec: np.ndarray) -> np.ndarray:
-    """Convert a Rodrigues rotation vector to a unit quaternion [w, x, y, z]."""
-    rotmat, _ = cv2.Rodrigues(rvec)
-    trace = np.trace(rotmat)
-
-    if trace > 0:
-        s = np.sqrt(trace + 1.0) * 2
-        qw = 0.25 * s
-        qx = (rotmat[2, 1] - rotmat[1, 2]) / s
-        qy = (rotmat[0, 2] - rotmat[2, 0]) / s
-        qz = (rotmat[1, 0] - rotmat[0, 1]) / s
-    elif rotmat[0, 0] > rotmat[1, 1] and rotmat[0, 0] > rotmat[2, 2]:
-        s = np.sqrt(1.0 + rotmat[0, 0] - rotmat[1, 1] - rotmat[2, 2]) * 2
-        qw = (rotmat[2, 1] - rotmat[1, 2]) / s
-        qx = 0.25 * s
-        qy = (rotmat[0, 1] + rotmat[1, 0]) / s
-        qz = (rotmat[0, 2] + rotmat[2, 0]) / s
-    elif rotmat[1, 1] > rotmat[2, 2]:
-        s = np.sqrt(1.0 + rotmat[1, 1] - rotmat[0, 0] - rotmat[2, 2]) * 2
-        qw = (rotmat[0, 2] - rotmat[2, 0]) / s
-        qx = (rotmat[0, 1] + rotmat[1, 0]) / s
-        qy = 0.25 * s
-        qz = (rotmat[1, 2] + rotmat[2, 1]) / s
-    else:
-        s = np.sqrt(1.0 + rotmat[2, 2] - rotmat[0, 0] - rotmat[1, 1]) * 2
-        qw = (rotmat[1, 0] - rotmat[0, 1]) / s
-        qx = (rotmat[0, 2] + rotmat[2, 0]) / s
-        qy = (rotmat[1, 2] + rotmat[2, 1]) / s
-        qz = 0.25 * s
-
-    return np.array([qw, qx, qy, qz])
-
-
-def _quat_to_rvec(quat: np.ndarray) -> np.ndarray:
-    """Convert a unit quaternion [w, x, y, z] back to a Rodrigues rotation vector."""
-    qw, qx, qy, qz = quat
-    rotmat = np.array([
-        [1 - 2 * (qy ** 2 + qz ** 2), 2 * (qx * qy - qz * qw), 2 * (qx * qz + qy * qw)],
-        [2 * (qx * qy + qz * qw), 1 - 2 * (qx ** 2 + qz ** 2), 2 * (qy * qz - qx * qw)],
-        [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw), 1 - 2 * (qx ** 2 + qy ** 2)],
-    ])
-    rvec, _ = cv2.Rodrigues(rotmat)
-    return rvec
-
-
-def _quat_slerp(q0: np.ndarray, q1: np.ndarray, t: float) -> np.ndarray:
-    """Spherical linear interpolation between two unit quaternions."""
-    dot = np.dot(q0, q1)
-
-    # Take the shorter path around the hypersphere
-    if dot < 0:
-        q1 = -q1
-        dot = -dot
-
-    if dot > 0.9995:
-        result = q0 + t * (q1 - q0)
-        return result / np.linalg.norm(result)
-
-    theta_0 = np.arccos(np.clip(dot, -1.0, 1.0))
-    theta = theta_0 * t
-
-    q_perp = q1 - q0 * dot
-    q_perp = q_perp / np.linalg.norm(q_perp)
-
-    return q0 * np.cos(theta) + q_perp * np.sin(theta)
-
-
-def _quat_angle_diff(q0: np.ndarray, q1: np.ndarray) -> float:
-    """Angular distance (radians) between two unit quaternions."""
-    dot = np.clip(np.abs(np.dot(q0, q1)), -1.0, 1.0)
-    return 2 * np.arccos(dot)
-
-
-class PoseFilter:
-    def __init__(self, alpha=0.3, outlier_threshold_pos=0.15, outlier_threshold_rot=0.5,
-                 max_consecutive_rejects=POSE_MAX_CONSECUTIVE_REJECTS):
-        self.alpha = alpha
-        self.outlier_threshold_pos = outlier_threshold_pos
-        self.outlier_threshold_rot = outlier_threshold_rot
-        self.max_consecutive_rejects = max_consecutive_rejects
-        self.consecutive_rejects = 0
-        self.smooth_tvec: np.ndarray | None = None
-        self.smooth_quat: np.ndarray | None = None
-
-    def _seed(self, tvec, rvec, quat):
-        """(Re)initialize the filter state from a measurement and accept it."""
-        self.smooth_tvec = tvec.copy()
-        self.smooth_quat = quat
-        self.consecutive_rejects = 0
-        return tvec.copy(), rvec.copy(), True
-
-    def update(self, tvec: np.ndarray, rvec: np.ndarray):
-        quat = _rvec_to_quat(rvec)
-
-        if self.smooth_tvec is None or self.smooth_quat is None:
-            return self._seed(tvec, rvec, quat)
-
-        pos_delta = np.linalg.norm(tvec - self.smooth_tvec)
-        rot_delta = _quat_angle_diff(self.smooth_quat, quat)
-
-        is_outlier = (
-            pos_delta > self.outlier_threshold_pos
-            or rot_delta > self.outlier_threshold_rot
-        )
-
-        if is_outlier:
-            self.consecutive_rejects += 1
-            # Sustained rejection means the marker genuinely moved (or we were stuck
-            # on a stale estimate) — re-lock to the latest measurement.
-            if self.consecutive_rejects >= self.max_consecutive_rejects:
-                return self._seed(tvec, rvec, quat)
-            return self.smooth_tvec.copy(), _quat_to_rvec(self.smooth_quat), False
-
-        self.consecutive_rejects = 0
-        self.smooth_tvec = (1 - self.alpha) * self.smooth_tvec + self.alpha * tvec
-        self.smooth_quat = _quat_slerp(self.smooth_quat, quat, self.alpha)
-
-        return self.smooth_tvec.copy(), _quat_to_rvec(self.smooth_quat), True
-
-
-
 @dataclass
 class LandingPadPose:
-    """
-    Smoothed landing-pad pose, expressed in the OpenCV CAMERA frame:
-      +X = right, +Y = down, +Z = forward (out of the lens).
-    tvec is meters from camera to marker center; rvec is the marker orientation
-    as a Rodrigues vector. reproj_error is the solver's pixel reprojection error.
-
-    NOTE for flight-controller integration: this is the CAMERA frame, not the
-    drone body/nav frame. The downstream MAVLink step must apply the camera→body
-    mounting transform (rotation + lever-arm) before sending LANDING_TARGET. For a
-    typical down-facing camera, body-forward ≈ camera +Y-ish and body-down ≈ camera
-    +Z — but the exact mapping depends on how the camera is bolted on, so it lives
-    in the integration layer, not here.
-    """
     marker_id: int
     tvec: np.ndarray          # (3,1) meters, camera frame
     rvec: np.ndarray          # (3,1) Rodrigues, camera frame
@@ -648,9 +421,7 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
     prev_t = time.perf_counter()
     while True:
         frame, seq = grabber.read()
-        # No new frame since last iteration: don't re-process the same image
-        # (wastes CPU). Service the GUI if shown, else back off briefly so we
-        # don't spin a core hot waiting for the next capture.
+       
         if frame is None or seq == last_seq:
             if SHOW_WINDOW:
                 if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -690,14 +461,11 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
 
         if PROFILE and frame_count % 30 == 0:
             print(
-                f"{fps:.1f} FPS  "
+                f"loop {fps:.1f} FPS  capture {grabber.capture_fps:.1f} FPS  "
                 f"preprocess {(t1 - t0) * 1000:.1f}ms  "
                 f"detect {(t2 - t1) * 1000:.1f}ms  [{detect_mode}]"
             )
 
-        # Display copy: promote CLAHE feed to 3-channel BGR so we can draw
-        # colored overlays on it. Built only when we're actually showing this
-        # frame — the GRAY2BGR + imshow is a top cost on the Nano.
         display = cv2.cvtColor(gray_clahe, cv2.COLOR_GRAY2BGR) if show else None
 
         if ids is not None and len(ids) > 0:
@@ -742,6 +510,7 @@ def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs
                         alpha=POSE_SMOOTH_ALPHA,
                         outlier_threshold_pos=POSE_OUTLIER_THRESHOLD_POS,
                         outlier_threshold_rot=POSE_OUTLIER_THRESHOLD_ROT,
+                        max_consecutive_rejects=POSE_MAX_CONSECUTIVE_REJECTS,
                     )
 
                 # Apply temporal smoothing and outlier rejection
