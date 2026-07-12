@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev
+CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev/build
+CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim/build
 
 # Utility rule file for setup_model.
 
@@ -67,9 +67,9 @@ include CMakeFiles/setup_model.dir/compiler_depend.make
 include CMakeFiles/setup_model.dir/progress.make
 
 CMakeFiles/setup_model:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Copying model directory to PX4"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Copying model directory to PX4"
 	/usr/bin/cmake -E make_directory /home/harold/Projects/Quads_Project/PX4-Autopilot/Tools/simulation/gz/models
-	/usr/bin/cmake -E copy_directory /home/harold/Projects/Quads_Project/drone_dev/model /home/harold/Projects/Quads_Project/PX4-Autopilot/Tools/simulation/gz/models/qav250
+	/usr/bin/cmake -E copy_directory /home/harold/Projects/Quads_Project/drone_dev_sim/model /home/harold/Projects/Quads_Project/PX4-Autopilot/Tools/simulation/gz/models/s500
 
 setup_model: CMakeFiles/setup_model
 setup_model: CMakeFiles/setup_model.dir/build.make
@@ -84,6 +84,6 @@ CMakeFiles/setup_model.dir/clean:
 .PHONY : CMakeFiles/setup_model.dir/clean
 
 CMakeFiles/setup_model.dir/depend:
-	cd /home/harold/Projects/Quads_Project/drone_dev/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles/setup_model.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/harold/Projects/Quads_Project/drone_dev_sim/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/setup_model.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/setup_model.dir/depend
 

@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev
+CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev/build
+CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim/build
 
 # Utility rule file for run_simulation.
 
@@ -67,8 +67,8 @@ include CMakeFiles/run_simulation.dir/compiler_depend.make
 include CMakeFiles/run_simulation.dir/progress.make
 
 CMakeFiles/run_simulation:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Installing files, building PX4, and starting Gazebo simulation"
-	cd /home/harold/Projects/Quads_Project/PX4-Autopilot && /usr/bin/make -C /home/harold/Projects/Quads_Project/PX4-Autopilot px4_sitl gz_qav250
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Installing files, building PX4, and starting Gazebo simulation"
+	cd /home/harold/Projects/Quads_Project/PX4-Autopilot && /usr/bin/make -C /home/harold/Projects/Quads_Project/PX4-Autopilot px4_sitl gz_s500
 
 run_simulation: CMakeFiles/run_simulation
 run_simulation: CMakeFiles/run_simulation.dir/build.make
@@ -83,6 +83,6 @@ CMakeFiles/run_simulation.dir/clean:
 .PHONY : CMakeFiles/run_simulation.dir/clean
 
 CMakeFiles/run_simulation.dir/depend:
-	cd /home/harold/Projects/Quads_Project/drone_dev/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles/run_simulation.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/harold/Projects/Quads_Project/drone_dev_sim/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/run_simulation.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/run_simulation.dir/depend
 

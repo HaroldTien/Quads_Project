@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev
+CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev/build
+CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim/build
 
 # Utility rule file for setup.
 
@@ -67,7 +67,7 @@ include CMakeFiles/setup.dir/compiler_depend.make
 include CMakeFiles/setup.dir/progress.make
 
 CMakeFiles/setup:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Setting up custom model and airframe in PX4"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Setting up custom model and airframe in PX4"
 
 setup: CMakeFiles/setup
 setup: CMakeFiles/setup.dir/build.make
@@ -82,6 +82,6 @@ CMakeFiles/setup.dir/clean:
 .PHONY : CMakeFiles/setup.dir/clean
 
 CMakeFiles/setup.dir/depend:
-	cd /home/harold/Projects/Quads_Project/drone_dev/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles/setup.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/harold/Projects/Quads_Project/drone_dev_sim/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/setup.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/setup.dir/depend
 

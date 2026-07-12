@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev
+CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev/build
+CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim/build
 
 # Utility rule file for clean_setup.
 
@@ -67,9 +67,10 @@ include CMakeFiles/clean_setup.dir/compiler_depend.make
 include CMakeFiles/clean_setup.dir/progress.make
 
 CMakeFiles/clean_setup:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Cleaning up custom files from PX4"
-	/usr/bin/cmake -E remove /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250
-	/usr/bin/cmake -E remove_directory /home/harold/Projects/Quads_Project/PX4-Autopilot/Tools/simulation/gz/models/qav250
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Cleaning up custom files from PX4 and unregistering the airframe"
+	/usr/bin/cmake -E remove /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_s500
+	/usr/bin/cmake -E remove_directory /home/harold/Projects/Quads_Project/PX4-Autopilot/Tools/simulation/gz/models/s500
+	bash /home/harold/Projects/Quads_Project/drone_dev_sim/tools/register_airframe.sh /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/CMakeLists.txt 4052_gz_s500 --unregister
 
 clean_setup: CMakeFiles/clean_setup
 clean_setup: CMakeFiles/clean_setup.dir/build.make
@@ -84,6 +85,6 @@ CMakeFiles/clean_setup.dir/clean:
 .PHONY : CMakeFiles/clean_setup.dir/clean
 
 CMakeFiles/clean_setup.dir/depend:
-	cd /home/harold/Projects/Quads_Project/drone_dev/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles/clean_setup.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/harold/Projects/Quads_Project/drone_dev_sim/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/clean_setup.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/clean_setup.dir/depend
 

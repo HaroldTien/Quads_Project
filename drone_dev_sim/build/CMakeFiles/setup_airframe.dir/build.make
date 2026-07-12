@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev
+CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev/build
+CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim/build
 
 # Utility rule file for setup_airframe.
 
@@ -67,10 +67,11 @@ include CMakeFiles/setup_airframe.dir/compiler_depend.make
 include CMakeFiles/setup_airframe.dir/progress.make
 
 CMakeFiles/setup_airframe:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Copying airframe file to PX4"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Copying airframe file to PX4 and registering it in the airframe list"
 	/usr/bin/cmake -E make_directory /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes
-	/usr/bin/cmake -E copy_if_different /home/harold/Projects/Quads_Project/drone_dev/airframes/4052_holybro_qav250_sim.sh /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250
-	chmod 755 /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_qav250
+	/usr/bin/cmake -E copy_if_different /home/harold/Projects/Quads_Project/drone_dev_sim/airframes/4052_holybro_s500_sim.sh /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_s500
+	chmod 755 /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_s500
+	bash /home/harold/Projects/Quads_Project/drone_dev_sim/tools/register_airframe.sh /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/CMakeLists.txt 4052_gz_s500
 
 setup_airframe: CMakeFiles/setup_airframe
 setup_airframe: CMakeFiles/setup_airframe.dir/build.make
@@ -85,6 +86,6 @@ CMakeFiles/setup_airframe.dir/clean:
 .PHONY : CMakeFiles/setup_airframe.dir/clean
 
 CMakeFiles/setup_airframe.dir/depend:
-	cd /home/harold/Projects/Quads_Project/drone_dev/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles/setup_airframe.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/harold/Projects/Quads_Project/drone_dev_sim/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/setup_airframe.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/setup_airframe.dir/depend
 

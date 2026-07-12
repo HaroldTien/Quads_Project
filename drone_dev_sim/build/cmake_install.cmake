@@ -1,4 +1,4 @@
-# Install script for directory: /home/harold/Projects/Quads_Project/drone_dev
+# Install script for directory: /home/harold/Projects/Quads_Project/drone_dev_sim
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/harold/Projects/Quads_Project/drone_dev/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/harold/Projects/Quads_Project/drone_dev_sim/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

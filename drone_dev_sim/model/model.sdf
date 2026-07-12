@@ -44,7 +44,7 @@
         <geometry>
           <mesh>
             <scale>0.001 0.001 0.001</scale>
-            <uri>model://px4vision/meshes/body.dae</uri>
+            <uri>model://s500/meshes/body.dae</uri>
           </mesh>
         </geometry>
         <material> <!-- DarkGrey-->
@@ -193,7 +193,7 @@
         <geometry>
           <mesh>
             <scale>0.6 0.6 0.6</scale>
-            <uri>model://px4vision/meshes/iris_prop_ccw.dae</uri>
+            <uri>model://s500/meshes/iris_prop_ccw.dae</uri>
           </mesh>
         </geometry>
         <material> <!-- Blue -->
@@ -257,7 +257,7 @@
         <geometry>
           <mesh>
             <scale>0.6 0.6 0.6</scale>
-            <uri>model://px4vision/meshes/iris_prop_ccw.dae</uri>
+            <uri>model://s500/meshes/iris_prop_ccw.dae</uri>
           </mesh>
         </geometry>
         <material> <!-- DarkGrey -->
@@ -321,7 +321,7 @@
         <geometry>
           <mesh>
             <scale>0.6 0.6 0.6</scale>
-            <uri>model://px4vision/meshes/iris_prop_cw.dae</uri>
+            <uri>model://s500/meshes/iris_prop_cw.dae</uri>
           </mesh>
         </geometry>
         <material> <!-- Blue -->
@@ -385,7 +385,7 @@
         <geometry>
           <mesh>
             <scale>0.6 0.6 0.6</scale>
-            <uri>model://px4vision/meshes/iris_prop_cw.dae</uri>
+            <uri>model://s500/meshes/iris_prop_cw.dae</uri>
           </mesh>
         </geometry>
         <material> <!-- DarkGrey -->

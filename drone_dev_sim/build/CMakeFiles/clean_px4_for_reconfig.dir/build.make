@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev
+CMAKE_SOURCE_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev/build
+CMAKE_BINARY_DIR = /home/harold/Projects/Quads_Project/drone_dev_sim/build
 
 # Utility rule file for clean_px4_for_reconfig.
 
@@ -67,7 +67,7 @@ include CMakeFiles/clean_px4_for_reconfig.dir/compiler_depend.make
 include CMakeFiles/clean_px4_for_reconfig.dir/progress.make
 
 CMakeFiles/clean_px4_for_reconfig:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Cleaning PX4 build to force reconfiguration with new airframe"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Cleaning PX4 build to force reconfiguration with new airframe"
 	rm -rf /home/harold/Projects/Quads_Project/PX4-Autopilot/build/px4_sitl_default
 
 clean_px4_for_reconfig: CMakeFiles/clean_px4_for_reconfig
@@ -83,6 +83,6 @@ CMakeFiles/clean_px4_for_reconfig.dir/clean:
 .PHONY : CMakeFiles/clean_px4_for_reconfig.dir/clean
 
 CMakeFiles/clean_px4_for_reconfig.dir/depend:
-	cd /home/harold/Projects/Quads_Project/drone_dev/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build /home/harold/Projects/Quads_Project/drone_dev/build/CMakeFiles/clean_px4_for_reconfig.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/harold/Projects/Quads_Project/drone_dev_sim/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/clean_px4_for_reconfig.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/clean_px4_for_reconfig.dir/depend
 
