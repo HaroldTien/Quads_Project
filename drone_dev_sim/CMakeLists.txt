@@ -40,8 +40,12 @@ set(CUSTOM_AIRFRAME_DEST "4052_gz_s500")
 
 # PX4 paths
 set(PX4_AIRFRAME_DIR "${PX4_DIR}/ROMFS/px4fmu_common/init.d-posix/airframes")
+set(PX4_AIRFRAME_LIST "${PX4_AIRFRAME_DIR}/CMakeLists.txt")
 set(PX4_MODEL_DIR "${PX4_DIR}/Tools/simulation/gz/models")
 set(PX4_BUILD_DIR "${PX4_DIR}/build/px4_sitl_default")
+
+# Helper that registers the airframe name in PX4's explicit airframe list
+set(REGISTER_AIRFRAME_SCRIPT "${DRONE_DEV_DIR}/tools/register_airframe.sh")
 
 # Verify custom files exist
 if(NOT EXISTS "${CUSTOM_MODEL_DIR}/model.sdf")
@@ -57,14 +61,19 @@ endif()
 # Setup: Copy/Link custom files to PX4 directories
 ############################################################################
 
-# Function to copy airframe file to PX4
+# Function to copy airframe file to PX4 and register it in PX4's airframe list.
+# The copy alone is not enough: PX4 only builds airframes explicitly listed in
+# ROMFS/.../init.d-posix/airframes/CMakeLists.txt (no globbing), so we also
+# register the destination name there or PX4 aborts with "Unknown model".
 add_custom_target(setup_airframe
     COMMAND ${CMAKE_COMMAND} -E make_directory "${PX4_AIRFRAME_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CUSTOM_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_SOURCE}"
         "${PX4_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_DEST}"
     COMMAND chmod 755 "${PX4_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_DEST}"
-    COMMENT "Copying airframe file to PX4"
+    COMMAND bash "${REGISTER_AIRFRAME_SCRIPT}"
+        "${PX4_AIRFRAME_LIST}" "${CUSTOM_AIRFRAME_DEST}"
+    COMMENT "Copying airframe file to PX4 and registering it in the airframe list"
     VERBATIM
 )
 
@@ -139,7 +148,10 @@ add_custom_target(run_simulation
 add_custom_target(clean_setup
     COMMAND ${CMAKE_COMMAND} -E remove "${PX4_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_DEST}"
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${PX4_MODEL_DIR}/${CUSTOM_MODEL_NAME}"
-    COMMENT "Cleaning up custom files from PX4"
+    COMMAND bash "${REGISTER_AIRFRAME_SCRIPT}"
+        "${PX4_AIRFRAME_LIST}" "${CUSTOM_AIRFRAME_DEST}" --unregister
+    COMMENT "Cleaning up custom files from PX4 and unregistering the airframe"
+    VERBATIM
 )
 
 add_custom_target(clean_px4
