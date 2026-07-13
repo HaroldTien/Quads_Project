@@ -1,11 +1,15 @@
+from __future__ import annotations  
+
 import cv2
 import cv2.aruco as aruco
 import numpy as np
 import sys
+import threading
 import time
-import csv
 from dataclasses import dataclass
 from pathlib import Path
+
+from pose_filter import PoseFilter
 
 
 # -------- User settings --------
@@ -13,16 +17,11 @@ MARKER_SIZE_METERS = 0.20   # 20 cm marker side length
 LANDING_PAD_ID = 0
 # 5x5 family options: 50, 100, 250, 1000
 ARUCO_DICT_NAME = "DICT_5X5_50"
-# Index 0 = Arducam OV9281 (works on Jetson/V4L2, but NOT on macOS — its mono
-# format won't negotiate with AVFoundation, so reads hang). For macOS bench
-# testing use index 1 = built-in MacBook camera. Revert to 0 for the Jetson/OV9281.
-# NOTE: built-in cam intrinsics differ from the OV9281 calibration files, so the
-# metric distance (Z) will be wrong here — detection/jitter/flip behavior is still valid.
+
 CAMERA_INDEX = 0
-FRAME_WIDTH = 1280
-FRAME_HEIGHT = 800
+FRAME_WIDTH = 640
+FRAME_HEIGHT = 480
 FPS = 30
-# ------------------------------
 
 # -------- Low-light settings --------
 # CLAHE parameters — increase clipLimit for more aggressive contrast boost
@@ -32,7 +31,7 @@ CLAHE_TILE_SIZE = (8, 8)
 # Edge-preserving denoise on the CLAHE output before detection. CLAHE amplifies
 # sensor grain, which wobbles the detected corners frame-to-frame; bilateral
 # filtering suppresses that noise while keeping marker edges crisp.
-DENOISE = True
+DENOISE = False
 DENOISE_DIAMETER = 5        # bilateral neighborhood diameter (pixels)
 DENOISE_SIGMA_COLOR = 50    # intensity sigma
 DENOISE_SIGMA_SPACE = 50    # spatial sigma
@@ -41,14 +40,17 @@ DENOISE_SIGMA_SPACE = 50    # spatial sigma
 # Set to -1 to leave at OS default (safe fallback)
 MANUAL_EXPOSURE = -1       # e.g. 100 (ms*10 on V4L2). -1 = auto
 MANUAL_GAIN = -1           # e.g. 200. -1 = auto
-# ------------------------------------
-
-# -------- Detector tuning --------
-# Lower = detects smaller/farther markers, but tiny markers have noisy corners
-# (jittery pose). Moderate value trades a little reach for stability.
+FALLBACK_EVERY_N = 3
+NATIVE_GRAY = False
+DETECT_SCALE = 0.5
+LOW_LATENCY_BUFFER = True
+SHOW_WINDOW = False
+SHOW_EVERY_N = 3
+DISPLAY_SCALE = 0.5
+PRINT_POSE_EVERY_N = 30
+PROFILE = False
 MIN_MARKER_PERIMETER_RATE = 0.05
-# Higher = tolerates more bit errors (helps in noise) but admits marginal/false
-# reads. Moderate value keeps low-light tolerance without inviting noisy detections.
+
 ERROR_CORRECTION_RATE = 0.5
 # ---------------------------------
 
@@ -66,48 +68,6 @@ POSE_MAX_CONSECUTIVE_REJECTS = 5
 # value means the corners and pose disagree, i.e. an unreliable solve.
 MAX_REPROJ_ERROR_PX = 4.0
 # ------------------------------------
-
-
-# ======== Light characterization ========
-# Self-contained measurement/logging path. It runs on the COLOUR frame ALONGSIDE
-# detection but never feeds into it. Flip LIGHT_CHAR_ENABLED to False to turn all
-# of this off and leave normal operation untouched.
-#
-# WHY measurement reads a colour luminance channel and NOT the grayscale detection
-# frame: the detection frame is grayscaled then run through CLAHE (local contrast
-# equalisation) and bilateral denoise. CLAHE deliberately rescales local brightness
-# for detectability, so a dark marker and a bright marker can end up with similar
-# pixel values — measuring off it would measure how hard CLAHE worked, not how much
-# light hit the sensor. For characterization we convert the raw BGR frame to LAB and
-# read L* (CIE lightness), which tracks actual scene illuminance and is what we'll
-# correlate against the manually-measured lux column.
-LIGHT_CHAR_ENABLED   = True
-LIGHT_CSV_PATH       = "light_char_log.csv"    # one row per frame
-FPS_REPORT_INTERVAL  = 5.0                      # seconds between measured-FPS prints
-
-# Brightness channel: "LAB" -> L*  (default) or "YCRCB" -> Y. Never BGR2GRAY, and
-# never the CLAHE detection frame — see note above.
-LUMA_COLORSPACE      = "LAB"
-
-# --- Manual sensor locks (so light metrics are valid & comparable frame-to-frame) ---
-# Auto exposure/gain/white-balance continuously retune the sensor, which makes any
-# luminance or clipping number meaningless across frames. Lock them for a capture.
-# Each value: -1 = leave at the camera's current/auto behaviour; a number = lock to it.
-LOCK_AUTO_EXPOSURE   = False    # True disables AE so FIXED_EXPOSURE takes effect
-FIXED_EXPOSURE       = -1
-LOCK_AUTO_GAIN       = False    # True disables auto-gain so FIXED_GAIN takes effect
-FIXED_GAIN           = -1
-LOCK_AUTO_WB         = False    # True disables auto-white-balance
-FIXED_WB_TEMP        = -1       # white-balance colour temperature, e.g. 4000
-
-# CAP_PROP_AUTO_EXPOSURE "manual" magic value differs by backend:
-#   V4L2 (Jetson): 1   |   UVC/AVFoundation (macOS): 0.25
-AE_MANUAL_VALUE      = 0.25 if sys.platform == "darwin" else 1
-
-# Michelson sampling grid: a DICT_5X5 marker is 5x5 data cells + a 1-cell black
-# border = 7x7 cells. We warp the marker to this grid to sample white/black cells.
-MARKER_GRID_CELLS    = 7
-# ==========================================
 
 
 def load_calibration(base_dir: Path):
@@ -135,6 +95,22 @@ def open_camera():
     if not cap.isOpened():
         return None
 
+    # Latency: the V4L2 driver FIFO fills faster than the loop drains it, and the
+    # FrameGrabber can only dequeue in order (one read per iteration), so it sits
+    # a few frames behind the sensor at steady state. Requesting a 1-deep buffer
+    # makes the driver hand back the freshest frame. See LOW_LATENCY_BUFFER for the
+    # FPS-vs-latency trade-off note.
+    if LOW_LATENCY_BUFFER:
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+    # OV9281 is monochrome: grab the raw single-channel GREY stream and stop
+    # OpenCV auto-expanding it to BGR. Saves a color conversion on capture (and
+    # the BGR->GRAY convert in the loop). See NATIVE_GRAY.
+    if NATIVE_GRAY:
+        grey_fourcc = ord("G") | (ord("R") << 8) | (ord("E") << 16) | (ord("Y") << 24)
+        cap.set(cv2.CAP_PROP_FOURCC, grey_fourcc)
+        cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)
+
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
     cap.set(cv2.CAP_PROP_FPS, FPS)
@@ -148,12 +124,6 @@ def open_camera():
     if MANUAL_GAIN != -1:
         cap.set(cv2.CAP_PROP_GAIN, MANUAL_GAIN)
         print(f"Gain set to {MANUAL_GAIN}")
-
-    # Light-characterization sensor locks. Applied AFTER the low-light settings
-    # above so they are authoritative for a characterization run; a no-op unless
-    # the LOCK_* flags are enabled.
-    if LIGHT_CHAR_ENABLED:
-        apply_camera_locks(cap)
 
     actual_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     actual_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -175,163 +145,46 @@ def open_camera():
     return None
 
 
-# ---------- Light-characterization helpers ----------
+class FrameGrabber:
 
-def apply_camera_locks(cap):
-    """
-    Disable auto exposure/gain/white-balance and lock fixed values per the
-    LOCK_*/FIXED_* config, so light metrics are valid and comparable across frames.
+    def __init__(self, cap):
+        self.cap = cap
+        self._lock = threading.Lock()
+        self._frame = None
+        self._seq = 0
+        self._running = True
+        
+        self.capture_fps = 0.0
+        self._thread = threading.Thread(target=self._reader, daemon=True)
+        self._thread.start()
 
-    Cameras frequently clamp or ignore requested values, so after setting each one
-    we READ IT BACK and print what actually stuck — that read-back is the value the
-    measurements were taken under, which is what belongs in the lab notes.
-    """
-    if LOCK_AUTO_EXPOSURE:
-        cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, AE_MANUAL_VALUE)
-        if FIXED_EXPOSURE != -1:
-            cap.set(cv2.CAP_PROP_EXPOSURE, FIXED_EXPOSURE)
+    def _reader(self):
+        prev = time.perf_counter()
+        while self._running:
+            ret, frame = self.cap.read()
+            if not ret or frame is None:
+                continue
+            now = time.perf_counter()
+            gap = now - prev
+            prev = now
+            if gap > 0:
+                inst = 1.0 / gap
+                self.capture_fps = inst if self.capture_fps == 0.0 else 0.9 * self.capture_fps + 0.1 * inst
+            # read() allocates a fresh buffer each call, so rebinding here never
+            # clobbers a frame the main loop is still holding a reference to.
+            with self._lock:
+                self._frame = frame
+                self._seq += 1
 
-    if LOCK_AUTO_GAIN:
-        # No portable "auto gain off" flag; setting a fixed gain pins it on most
-        # backends. -1 means lock requested but no value given (left as-is).
-        if FIXED_GAIN != -1:
-            cap.set(cv2.CAP_PROP_GAIN, FIXED_GAIN)
+    def read(self):
+        """Return (frame, seq) for the latest frame, or (None, seq) if none yet."""
+        with self._lock:
+            return self._frame, self._seq
 
-    if LOCK_AUTO_WB:
-        cap.set(cv2.CAP_PROP_AUTO_WB, 0)
-        if FIXED_WB_TEMP != -1:
-            cap.set(cv2.CAP_PROP_WB_TEMPERATURE, FIXED_WB_TEMP)
-
-    # Read-back: report the actual applied sensor state.
-    print("Light-characterization sensor locks (actual applied values):")
-    print(f"  AUTO_EXPOSURE : {cap.get(cv2.CAP_PROP_AUTO_EXPOSURE):.3f}  "
-          f"(locked={LOCK_AUTO_EXPOSURE})")
-    print(f"  EXPOSURE      : {cap.get(cv2.CAP_PROP_EXPOSURE):.3f}")
-    print(f"  GAIN          : {cap.get(cv2.CAP_PROP_GAIN):.3f}  "
-          f"(locked={LOCK_AUTO_GAIN})")
-    print(f"  AUTO_WB       : {cap.get(cv2.CAP_PROP_AUTO_WB):.3f}  "
-          f"(locked={LOCK_AUTO_WB})")
-    print(f"  WB_TEMPERATURE: {cap.get(cv2.CAP_PROP_WB_TEMPERATURE):.3f}")
-
-
-def luminance_channel(bgr: np.ndarray) -> np.ndarray:
-    """
-    Return a single-channel photometric brightness image from the COLOUR frame:
-    LAB L* (default) or YCrCb Y. NOT BGR2GRAY and NOT the CLAHE detection frame —
-    see the Light-characterization config note for why.
-    """
-    if LUMA_COLORSPACE == "YCRCB":
-        return cv2.cvtColor(bgr, cv2.COLOR_BGR2YCrCb)[:, :, 0]
-    return cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0]   # L*
-
-
-def marker_region_mask(shape, corner) -> np.ndarray:
-    """Boolean mask of the marker quad (from its 4 detected corners)."""
-    mask = np.zeros(shape[:2], dtype=np.uint8)
-    pts = corner[0].astype(np.int32)
-    cv2.fillConvexPoly(mask, pts, 255)
-    return mask.astype(bool)
-
-
-def channel_stats(bgr: np.ndarray, mask) -> dict:
-    """
-    Per-channel mean (B, G, R) and clipping fraction (pixels == 255) over the
-    masked region, or the full frame when mask is None. The clip fraction is an
-    over-exposure indicator: a rising value means that channel is saturating.
-    """
-    if mask is None:
-        region = bgr.reshape(-1, 3)
-    else:
-        region = bgr[mask]
-    if region.size == 0:
-        region = bgr.reshape(-1, 3)
-
-    means = region.mean(axis=0)                       # B, G, R
-    clip = (region == 255).mean(axis=0)               # fraction at 255 per channel
-    return {
-        "B_mean": float(means[0]), "G_mean": float(means[1]), "R_mean": float(means[2]),
-        "clip_frac_B": float(clip[0]),
-        "clip_frac_G": float(clip[1]),
-        "clip_frac_R": float(clip[2]),
-    }
-
-
-def michelson_contrast(luma: np.ndarray, corner) -> float | None:
-    """
-    Michelson contrast (I_white - I_black)/(I_white + I_black) inside the marker.
-
-    The marker is perspective-warped to a MARKER_GRID_CELLS square canonical grid
-    using its 4 detected corners. Each cell's centre is sampled (edges skipped to
-    avoid mixed-colour boundary pixels), cells are split into white/black sets by a
-    midpoint threshold, and I_white/I_black are the means of those sets. Using real
-    marker cells means the contrast reflects the printed black/white as the sensor
-    actually captured it. Returns None if it can't be computed.
-    """
-    n = MARKER_GRID_CELLS
-    cell_px = 12
-    size = n * cell_px
-    dst = np.array([[0, 0], [size - 1, 0], [size - 1, size - 1], [0, size - 1]],
-                   dtype=np.float32)
-    src = corner[0].astype(np.float32)
-
-    try:
-        H = cv2.getPerspectiveTransform(src, dst)
-        warped = cv2.warpPerspective(luma, H, (size, size))
-    except cv2.error:
-        return None
-
-    cell_means = []
-    pad = 3   # skip cell-edge pixels
-    for r in range(n):
-        for c in range(n):
-            patch = warped[r * cell_px + pad:(r + 1) * cell_px - pad,
-                           c * cell_px + pad:(c + 1) * cell_px - pad]
-            if patch.size:
-                cell_means.append(patch.mean())
-
-    if not cell_means:
-        return None
-
-    cell_means = np.array(cell_means, dtype=np.float64)
-    thr = (cell_means.min() + cell_means.max()) / 2.0
-    whites = cell_means[cell_means >= thr]
-    blacks = cell_means[cell_means < thr]
-    if whites.size == 0 or blacks.size == 0:
-        return None
-
-    i_white = whites.mean()
-    i_black = blacks.mean()
-    denom = i_white + i_black
-    if denom <= 0:
-        return None
-    return float((i_white - i_black) / denom)
-
-
-class CsvLogger:
-    """
-    Per-frame CSV writer. FIELDS is the single source of truth for the schema —
-    append a column name (e.g. "lux") here and pass it in the row dict; missing
-    keys are written blank, so extending the schema never breaks existing code.
-    """
-    FIELDS = [
-        "timestamp", "detected", "marker_id", "detect_mode",
-        "L_mean", "B_mean", "G_mean", "R_mean",
-        "clip_frac_B", "clip_frac_G", "clip_frac_R",
-        "michelson_contrast", "x", "y", "z",
-    ]
-
-    def __init__(self, path):
-        self._f = open(path, "w", newline="")
-        self._w = csv.DictWriter(self._f, fieldnames=self.FIELDS, extrasaction="ignore")
-        self._w.writeheader()
-        self._f.flush()
-
-    def write(self, row: dict):
-        self._w.writerow(row)
-        self._f.flush()   # flush per frame so a killed capture still has its data
-
-    def close(self):
-        self._f.close()
+    def stop(self):
+        self._running = False
+        self._thread.join(timeout=1.0)
+        self.cap.release()
 
 
 def build_detector():
@@ -352,9 +205,12 @@ def build_detector():
     aruco_dict = aruco.getPredefinedDictionary(aruco_dict_id)
     params = aruco.DetectorParameters()
 
-    # Adaptive thresholding — wider range handles patchy shadows
+    # Adaptive thresholding — each window size in this range is a full-frame
+    # threshold pass, so the count directly sets detection cost. 3..53 step 10 is
+    # SIX passes; trimming to 3..23 step 10 (THREE passes) roughly halves the
+
     params.adaptiveThreshWinSizeMin = 3
-    params.adaptiveThreshWinSizeMax = 53
+    params.adaptiveThreshWinSizeMax = 23
     params.adaptiveThreshWinSizeStep = 10
     params.adaptiveThreshConstant = 7
 
@@ -363,30 +219,12 @@ def build_detector():
 
     # Bit-error tolerance — see ERROR_CORRECTION_RATE
     params.errorCorrectionRate = ERROR_CORRECTION_RATE
-
-    # Improve corner refinement accuracy
-    params.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
-    params.cornerRefinementWinSize = 5
+    params.cornerRefinementMethod = aruco.CORNER_REFINE_NONE
 
     return aruco.ArucoDetector(aruco_dict, params)
 
 
 def estimate_pose_markers(corners, camera_matrix, dist_coeffs):
-    """
-    Estimate per-marker pose, resolving the planar (mirror) ambiguity.
-
-    SOLVEPNP_IPPE_SQUARE yields two valid solutions for a planar square; solvePnP
-    silently returns one, which is why the pose sometimes flips to a "behind the
-    camera" mirror (negative Z). solvePnPGeneric returns BOTH solutions plus their
-    reprojection errors, so we can deliberately keep the physically valid one.
-
-    Selection rule: prefer the solution with positive Z (marker in front of the
-    camera); among valid candidates pick the lowest reprojection error. Falls back
-    to lowest reprojection error if neither has positive Z.
-
-    Returns (rvecs, tvecs, reproj_errors) — reproj_errors is per-marker pixels, used
-    downstream to gate out unreliable solves.
-    """
     marker_size = MARKER_SIZE_METERS
     rvecs = []
     tvecs = []
@@ -436,11 +274,6 @@ def estimate_pose_markers(corners, camera_matrix, dist_coeffs):
 
 
 def preprocess_frame(gray: np.ndarray, clahe) -> np.ndarray:
-    """
-    Apply CLAHE to equalise contrast locally — core fix for shadows. Optionally
-    follow with an edge-preserving bilateral filter to suppress the sensor grain
-    CLAHE amplifies (a major source of corner/pose jitter in low light).
-    """
     enhanced = clahe.apply(gray)
     if DENOISE:
         enhanced = cv2.bilateralFilter(
@@ -449,17 +282,25 @@ def preprocess_frame(gray: np.ndarray, clahe) -> np.ndarray:
     return enhanced
 
 
-def detect_with_fallback(detector, gray_clahe: np.ndarray):
+def detect_with_fallback(detector, gray_clahe: np.ndarray, run_fallback: bool = True):
     """
     Two-pass detection:
       Pass 1: CLAHE-enhanced grayscale (handles most low-light cases)
       Pass 2: Adaptive threshold on top of CLAHE (handles extreme shadows/hotspots)
     Returns corners, ids from whichever pass succeeds first.
+
+    The second pass is expensive, so `run_fallback=False` skips it — the caller
+    throttles it (see FALLBACK_EVERY_N) so marker-less frames don't pay double
+    every single frame. detect_mode is "none" when pass 1 fails and the fallback
+    is skipped.
     """
     corners, ids, rejected = detector.detectMarkers(gray_clahe)
 
     if ids is not None and len(ids) > 0:
         return corners, ids, "clahe"
+
+    if not run_fallback:
+        return corners, ids, "none"
 
     # Fallback: binarise with adaptive threshold to crush uneven shadows
     adaptive = cv2.adaptiveThreshold(
@@ -475,142 +316,41 @@ def detect_with_fallback(detector, gray_clahe: np.ndarray):
     return corners, ids, "adaptive"
 
 
-def _rvec_to_quat(rvec: np.ndarray) -> np.ndarray:
-    """Convert a Rodrigues rotation vector to a unit quaternion [w, x, y, z]."""
-    rotmat, _ = cv2.Rodrigues(rvec)
-    trace = np.trace(rotmat)
-
-    if trace > 0:
-        s = np.sqrt(trace + 1.0) * 2
-        qw = 0.25 * s
-        qx = (rotmat[2, 1] - rotmat[1, 2]) / s
-        qy = (rotmat[0, 2] - rotmat[2, 0]) / s
-        qz = (rotmat[1, 0] - rotmat[0, 1]) / s
-    elif rotmat[0, 0] > rotmat[1, 1] and rotmat[0, 0] > rotmat[2, 2]:
-        s = np.sqrt(1.0 + rotmat[0, 0] - rotmat[1, 1] - rotmat[2, 2]) * 2
-        qw = (rotmat[2, 1] - rotmat[1, 2]) / s
-        qx = 0.25 * s
-        qy = (rotmat[0, 1] + rotmat[1, 0]) / s
-        qz = (rotmat[0, 2] + rotmat[2, 0]) / s
-    elif rotmat[1, 1] > rotmat[2, 2]:
-        s = np.sqrt(1.0 + rotmat[1, 1] - rotmat[0, 0] - rotmat[2, 2]) * 2
-        qw = (rotmat[0, 2] - rotmat[2, 0]) / s
-        qx = (rotmat[0, 1] + rotmat[1, 0]) / s
-        qy = 0.25 * s
-        qz = (rotmat[1, 2] + rotmat[2, 1]) / s
-    else:
-        s = np.sqrt(1.0 + rotmat[2, 2] - rotmat[0, 0] - rotmat[1, 1]) * 2
-        qw = (rotmat[1, 0] - rotmat[0, 1]) / s
-        qx = (rotmat[0, 2] + rotmat[2, 0]) / s
-        qy = (rotmat[1, 2] + rotmat[2, 1]) / s
-        qz = 0.25 * s
-
-    return np.array([qw, qx, qy, qz])
+_SUBPIX_CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01)
 
 
-def _quat_to_rvec(quat: np.ndarray) -> np.ndarray:
-    """Convert a unit quaternion [w, x, y, z] back to a Rodrigues rotation vector."""
-    qw, qx, qy, qz = quat
-    rotmat = np.array([
-        [1 - 2 * (qy ** 2 + qz ** 2), 2 * (qx * qy - qz * qw), 2 * (qx * qz + qy * qw)],
-        [2 * (qx * qy + qz * qw), 1 - 2 * (qx ** 2 + qz ** 2), 2 * (qy * qz - qx * qw)],
-        [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw), 1 - 2 * (qx ** 2 + qy ** 2)],
-    ])
-    rvec, _ = cv2.Rodrigues(rotmat)
-    return rvec
+def refine_corners_fullres(gray: np.ndarray, corners):
+    refined = []
+    for corner in corners:
+        pts = corner.reshape(-1, 1, 2).astype(np.float32)
+        cv2.cornerSubPix(gray, pts, (5, 5), (-1, -1), _SUBPIX_CRITERIA)
+        refined.append(pts.reshape(1, 4, 2))
+    return refined
 
 
-def _quat_slerp(q0: np.ndarray, q1: np.ndarray, t: float) -> np.ndarray:
-    """Spherical linear interpolation between two unit quaternions."""
-    dot = np.dot(q0, q1)
+def detect_scaled(detector, gray_clahe: np.ndarray, run_fallback: bool):
+    
+    if DETECT_SCALE == 1.0:
+        corners, ids, mode = detect_with_fallback(detector, gray_clahe, run_fallback)
+        if ids is not None and len(ids) > 0:
+            corners = refine_corners_fullres(gray_clahe, corners)
+        return corners, ids, mode
 
-    # Take the shorter path around the hypersphere
-    if dot < 0:
-        q1 = -q1
-        dot = -dot
+    small = cv2.resize(
+        gray_clahe, None, fx=DETECT_SCALE, fy=DETECT_SCALE, interpolation=cv2.INTER_AREA
+    )
+    corners, ids, mode = detect_with_fallback(detector, small, run_fallback)
 
-    if dot > 0.9995:
-        result = q0 + t * (q1 - q0)
-        return result / np.linalg.norm(result)
+    if ids is not None and len(ids) > 0:
+        inv = 1.0 / DETECT_SCALE
+        corners = [c * inv for c in corners]                 # small -> full-res coords
+        corners = refine_corners_fullres(gray_clahe, corners)  # recover sub-pixel edges
 
-    theta_0 = np.arccos(np.clip(dot, -1.0, 1.0))
-    theta = theta_0 * t
-
-    q_perp = q1 - q0 * dot
-    q_perp = q_perp / np.linalg.norm(q_perp)
-
-    return q0 * np.cos(theta) + q_perp * np.sin(theta)
-
-
-def _quat_angle_diff(q0: np.ndarray, q1: np.ndarray) -> float:
-    """Angular distance (radians) between two unit quaternions."""
-    dot = np.clip(np.abs(np.dot(q0, q1)), -1.0, 1.0)
-    return 2 * np.arccos(dot)
-
-
-class PoseFilter:
-    def __init__(self, alpha=0.3, outlier_threshold_pos=0.15, outlier_threshold_rot=0.5,
-                 max_consecutive_rejects=POSE_MAX_CONSECUTIVE_REJECTS):
-        self.alpha = alpha
-        self.outlier_threshold_pos = outlier_threshold_pos
-        self.outlier_threshold_rot = outlier_threshold_rot
-        self.max_consecutive_rejects = max_consecutive_rejects
-        self.consecutive_rejects = 0
-        self.smooth_tvec: np.ndarray | None = None
-        self.smooth_quat: np.ndarray | None = None
-
-    def _seed(self, tvec, rvec, quat):
-        """(Re)initialize the filter state from a measurement and accept it."""
-        self.smooth_tvec = tvec.copy()
-        self.smooth_quat = quat
-        self.consecutive_rejects = 0
-        return tvec.copy(), rvec.copy(), True
-
-    def update(self, tvec: np.ndarray, rvec: np.ndarray):
-        quat = _rvec_to_quat(rvec)
-
-        if self.smooth_tvec is None or self.smooth_quat is None:
-            return self._seed(tvec, rvec, quat)
-
-        pos_delta = np.linalg.norm(tvec - self.smooth_tvec)
-        rot_delta = _quat_angle_diff(self.smooth_quat, quat)
-
-        is_outlier = (
-            pos_delta > self.outlier_threshold_pos
-            or rot_delta > self.outlier_threshold_rot
-        )
-
-        if is_outlier:
-            self.consecutive_rejects += 1
-            # Sustained rejection means the marker genuinely moved (or we were stuck
-            # on a stale estimate) — re-lock to the latest measurement.
-            if self.consecutive_rejects >= self.max_consecutive_rejects:
-                return self._seed(tvec, rvec, quat)
-            return self.smooth_tvec.copy(), _quat_to_rvec(self.smooth_quat), False
-
-        self.consecutive_rejects = 0
-        self.smooth_tvec = (1 - self.alpha) * self.smooth_tvec + self.alpha * tvec
-        self.smooth_quat = _quat_slerp(self.smooth_quat, quat, self.alpha)
-
-        return self.smooth_tvec.copy(), _quat_to_rvec(self.smooth_quat), True
-
+    return corners, ids, mode
 
 
 @dataclass
 class LandingPadPose:
-    """
-    Smoothed landing-pad pose, expressed in the OpenCV CAMERA frame:
-      +X = right, +Y = down, +Z = forward (out of the lens).
-    tvec is meters from camera to marker center; rvec is the marker orientation
-    as a Rodrigues vector. reproj_error is the solver's pixel reprojection error.
-
-    NOTE for flight-controller integration: this is the CAMERA frame, not the
-    drone body/nav frame. The downstream MAVLink step must apply the camera→body
-    mounting transform (rotation + lever-arm) before sending LANDING_TARGET. For a
-    typical down-facing camera, body-forward ≈ camera +Y-ish and body-down ≈ camera
-    +Z — but the exact mapping depends on how the camera is bolted on, so it lives
-    in the integration layer, not here.
-    """
     marker_id: int
     tvec: np.ndarray          # (3,1) meters, camera frame
     rvec: np.ndarray          # (3,1) Rodrigues, camera frame
@@ -658,51 +398,79 @@ def main():
     )
     print("Press 'q' to quit.\n")
 
-    # Light-characterization CSV logger (separate measurement path; off => None).
-    csv_logger = CsvLogger(LIGHT_CSV_PATH) if LIGHT_CHAR_ENABLED else None
-    if csv_logger is not None:
-        print(f"Light characterization ON — logging per-frame metrics to "
-              f"{LIGHT_CSV_PATH}\n")
+    # Capture runs in its own thread so the loop always gets the freshest frame.
+    grabber = FrameGrabber(cap)
 
     try:
-        _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs,
-                  csv_logger)
+        _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs)
     finally:
-        cap.release()
+        grabber.stop()
         cv2.destroyAllWindows()
-        if csv_logger is not None:
-            csv_logger.close()
 
 
-def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs,
-              csv_logger=None):
-    # Measured-loop-rate state: count frames between periodic FPS prints so we can
-    # see whether the added light-measurement processing is slowing the pipeline.
-    fps_count = 0
-    fps_t0 = time.time()
-
+def _run_loop(grabber, detector, clahe, pose_filters, camera_matrix, dist_coeffs):
+    # Counts consecutive marker-less frames so we only pay for the expensive
+    # adaptive fallback once every FALLBACK_EVERY_N of them.
+    misses = 0
+    frame_count = 0
+    last_seq = -1
+    # Rolling FPS of the processing loop (exponentially smoothed so it doesn't
+    # flicker frame-to-frame). Measured per processed frame, so it reflects real
+    # throughput after skipping duplicate captures.
+    fps = 0.0
+    prev_t = time.perf_counter()
     while True:
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            print("Warning: dropped frame.")
+        frame, seq = grabber.read()
+       
+        if frame is None or seq == last_seq:
+            if SHOW_WINDOW:
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+            else:
+                time.sleep(0.001)
             continue
+        last_seq = seq
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame_count += 1
+        show = SHOW_WINDOW and (frame_count % SHOW_EVERY_N == 0)
+
+        # Update rolling FPS from the gap since the last processed frame.
+        now = time.perf_counter()
+        dt = now - prev_t
+        prev_t = now
+        if dt > 0:
+            inst_fps = 1.0 / dt
+            fps = inst_fps if fps == 0.0 else 0.9 * fps + 0.1 * inst_fps
+
+        t0 = time.perf_counter()
+        # With NATIVE_GRAY the frame already arrives single-channel; otherwise
+        # it's BGR and needs converting. Handle both so the flag is safe to flip.
+        gray = frame if frame.ndim == 2 else cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray_clahe = preprocess_frame(gray, clahe)
+        t1 = time.perf_counter()
 
-        # Detection runs on the untouched 1-channel CLAHE image.
-        corners, ids, detect_mode = detect_with_fallback(detector, gray_clahe)
+        # Detection runs on the untouched 1-channel CLAHE image. Only spend the
+        # adaptive fallback on the first marker-less frame and then every Nth.
+        run_fallback = (misses % FALLBACK_EVERY_N == 0)
+        corners, ids, detect_mode = detect_scaled(
+            detector, gray_clahe, run_fallback
+        )
+        t2 = time.perf_counter()
 
-        # Smoothed pose per marker captured for the light-characterization CSV
-        # (additive only — does not affect detection/pose logic below).
-        frame_poses = {}
+        misses = 0 if (ids is not None and len(ids) > 0) else misses + 1
 
-        # Display copy: promote CLAHE feed to 3-channel BGR so we can draw
-        # colored overlays on it. The detector never sees this copy.
-        display = cv2.cvtColor(gray_clahe, cv2.COLOR_GRAY2BGR)
+        if PROFILE and frame_count % 30 == 0:
+            print(
+                f"loop {fps:.1f} FPS  capture {grabber.capture_fps:.1f} FPS  "
+                f"preprocess {(t1 - t0) * 1000:.1f}ms  "
+                f"detect {(t2 - t1) * 1000:.1f}ms  [{detect_mode}]"
+            )
+
+        display = cv2.cvtColor(gray_clahe, cv2.COLOR_GRAY2BGR) if show else None
 
         if ids is not None and len(ids) > 0:
-            aruco.drawDetectedMarkers(display, corners, ids)
+            if display is not None:
+                aruco.drawDetectedMarkers(display, corners, ids)
 
             rvecs, tvecs, reproj_errors = estimate_pose_markers(
                 corners, camera_matrix, dist_coeffs
@@ -722,17 +490,18 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs,
                     or not np.all(np.isfinite(tvec))
                     or reproj_error > MAX_REPROJ_ERROR_PX
                 ):
-                    p = corners[i][0][0].astype(int)
-                    cv2.putText(
-                        display,
-                        f"ID:{marker_id} [bad pose] err:{reproj_error:.1f}px",
-                        (p[0], max(25, p[1] - 10)),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.55,
-                        (0, 0, 255),
-                        2,
-                        cv2.LINE_AA,
-                    )
+                    if display is not None:
+                        p = corners[i][0][0].astype(int)
+                        cv2.putText(
+                            display,
+                            f"ID:{marker_id} [bad pose] err:{reproj_error:.1f}px",
+                            (p[0], max(25, p[1] - 10)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.55,
+                            (0, 0, 255),
+                            2,
+                            cv2.LINE_AA,
+                        )
                     continue
 
                 # Initialize filter for this marker if first detection
@@ -741,42 +510,45 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs,
                         alpha=POSE_SMOOTH_ALPHA,
                         outlier_threshold_pos=POSE_OUTLIER_THRESHOLD_POS,
                         outlier_threshold_rot=POSE_OUTLIER_THRESHOLD_ROT,
+                        max_consecutive_rejects=POSE_MAX_CONSECUTIVE_REJECTS,
                     )
 
                 # Apply temporal smoothing and outlier rejection
                 tvec, rvec, is_valid = pose_filters[marker_id].update(tvec, rvec)
 
-                cv2.drawFrameAxes(display, camera_matrix, dist_coeffs, rvec, tvec, 0.08)
-
                 x, y, z = tvec.flatten()
-                frame_poses[int(marker_id)] = (float(x), float(y), float(z))
                 validity_flag = "" if is_valid else " [rejected]"
-                # raw_z is this frame's measurement; z is the smoothed output —
-                # the gap between them is a direct readout of residual jitter.
-                label = (
-                    f"ID:{marker_id} X:{x:+.2f} Y:{y:+.2f} Z:{z:.2f}m "
-                    f"(raw {raw_z:.2f}) err:{reproj_error:.1f}px "
-                    f"[{detect_mode}]{validity_flag}"
-                )
 
-                p = corners[i][0][0].astype(int)
-                cv2.putText(
-                    display,
-                    label,
-                    (p[0], max(25, p[1] - 10)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.55,
-                    (0, 255, 0) if marker_id == LANDING_PAD_ID else (0, 200, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
+                if display is not None:
+                    cv2.drawFrameAxes(display, camera_matrix, dist_coeffs, rvec, tvec, 0.08)
+
+                    # raw_z is this frame's measurement; z is the smoothed output
+                    # — the gap between them is a direct readout of residual jitter.
+                    label = (
+                        f"ID:{marker_id} X:{x:+.2f} Y:{y:+.2f} Z:{z:.2f}m "
+                        f"(raw {raw_z:.2f}) err:{reproj_error:.1f}px "
+                        f"[{detect_mode}]{validity_flag}"
+                    )
+
+                    p = corners[i][0][0].astype(int)
+                    cv2.putText(
+                        display,
+                        label,
+                        (p[0], max(25, p[1] - 10)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.55,
+                        (0, 255, 0) if marker_id == LANDING_PAD_ID else (0, 200, 255),
+                        2,
+                        cv2.LINE_AA,
+                    )
 
                 if marker_id == LANDING_PAD_ID:
-                    print(
-                        f"LANDING PAD ID:{marker_id} "
-                        f"X:{x:+.3f}m Y:{y:+.3f}m Dist:{z:.3f}m (raw {raw_z:.3f}) "
-                        f"err:{reproj_error:.2f}px [{detect_mode}]{validity_flag}"
-                    )
+                    if PRINT_POSE_EVERY_N <= 1 or frame_count % PRINT_POSE_EVERY_N == 0:
+                        print(
+                            f"LANDING PAD ID:{marker_id} "
+                            f"X:{x:+.3f}m Y:{y:+.3f}m Dist:{z:.3f}m (raw {raw_z:.3f}) "
+                            f"err:{reproj_error:.2f}px [{detect_mode}]{validity_flag}"
+                        )
                     publish_pose(LandingPadPose(
                         marker_id=int(marker_id),
                         tvec=tvec,
@@ -786,75 +558,27 @@ def _run_loop(cap, detector, clahe, pose_filters, camera_matrix, dist_coeffs,
                         detect_mode=detect_mode,
                     ))
 
-        # ----- Light-characterization measurement path (colour frame) -----
-        # Distinct from detection: operates on the original BGR `frame`, never on
-        # the grayscale/CLAHE detection feed. See LUMA_COLORSPACE note for why.
-        if csv_logger is not None:
-            detected = ids is not None and len(ids) > 0
+        if display is not None:
+            cv2.putText(
+                display,
+                f"{fps:.1f} FPS | q to quit",
+                (20, 35),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
+            if DISPLAY_SCALE != 1.0:
+                display = cv2.resize(
+                    display, None, fx=DISPLAY_SCALE, fy=DISPLAY_SCALE,
+                    interpolation=cv2.INTER_AREA,
+                )
+            cv2.imshow("CLAHE ArUco Detection (low-light)", display)
 
-            # Pick the measured marker: prefer the landing pad, else the first
-            # detected marker, else none (full-frame fallback for the metrics).
-            meas_idx = None
-            meas_id = ""
-            if detected:
-                id_list = list(ids.flatten())
-                if LANDING_PAD_ID in id_list:
-                    meas_idx = id_list.index(LANDING_PAD_ID)
-                else:
-                    meas_idx = 0
-                meas_id = int(id_list[meas_idx])
-
-            # Region = marker quad when detected, else full frame.
-            mask = (marker_region_mask(frame.shape, corners[meas_idx])
-                    if meas_idx is not None else None)
-
-            luma = luminance_channel(frame)
-            l_mean = float(luma[mask].mean()) if mask is not None else float(luma.mean())
-            stats = channel_stats(frame, mask)
-
-            michelson = (michelson_contrast(luma, corners[meas_idx])
-                         if meas_idx is not None else None)
-
-            pose = frame_poses.get(meas_id) if meas_id != "" else None
-
-            row = {
-                "timestamp": time.time(),
-                "detected": detected,
-                "marker_id": meas_id,
-                "detect_mode": detect_mode if detected else "",
-                "L_mean": l_mean,
-                "michelson_contrast": "" if michelson is None else michelson,
-                "x": "" if pose is None else pose[0],
-                "y": "" if pose is None else pose[1],
-                "z": "" if pose is None else pose[2],
-            }
-            row.update(stats)
-            csv_logger.write(row)
-
-            # Measured loop rate — how fast the pipeline actually runs WITH the
-            # added measurement work. Printed every FPS_REPORT_INTERVAL seconds.
-            fps_count += 1
-            elapsed = time.time() - fps_t0
-            if elapsed >= FPS_REPORT_INTERVAL:
-                print(f"[light-char] measured loop rate: {fps_count / elapsed:.1f} FPS")
-                fps_count = 0
-                fps_t0 = time.time()
-        # -------------------------------------------------------------------
-
-        cv2.putText(
-            display,
-            "Press q to quit",
-            (20, 35),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (255, 255, 255),
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.imshow("CLAHE ArUco Detection (low-light)", display)
-
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        if SHOW_WINDOW:
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
 
 
 
