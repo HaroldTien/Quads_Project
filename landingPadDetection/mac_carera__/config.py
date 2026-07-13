@@ -16,7 +16,7 @@ ARUCO_DICT_NAME = "DICT_5X5_50"
 # testing use index 1 = built-in MacBook camera. Revert to 0 for the Jetson/OV9281.
 # NOTE: built-in cam intrinsics differ from the OV9281 calibration files, so the
 # metric distance (Z) will be wrong here — detection/jitter/flip behavior is still valid.
-CAMERA_INDEX = 0
+CAMERA_INDEX = 1
 FRAME_WIDTH = 1280
 FRAME_HEIGHT = 800
 FPS = 30
@@ -31,7 +31,7 @@ CLAHE_TILE_SIZE = (8, 8)
 # sensor grain, which wobbles the detected corners frame-to-frame; bilateral
 # filtering suppresses that noise while keeping marker edges crisp.
 DENOISE = True
-DENOISE_DIAMETER = 5        # bilateral ne  ighborhood diameter (pixels)
+DENOISE_DIAMETER = 5        # bilateral neighborhood diameter (pixels)
 DENOISE_SIGMA_COLOR = 50    # intensity sigma
 DENOISE_SIGMA_SPACE = 50    # spatial sigma
 
