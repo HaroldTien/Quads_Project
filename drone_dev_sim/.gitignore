@@ -1,2 +1,32 @@
 # PX4 Autopilot (large external dependency — not committed)
 PX4-Autopilot/
+# build artifacts
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# editor/IDE
+.vscode/
+.idea/
+*.swp
+*~
+.claude/
+
+
+# logs and temp
+*.log
+*.tmp
+
+# model/mesh artifacts (if any; keep the source in model/)
+model/**/*.dae~
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# airframe registration artifacts
+airframes/*.bak
+tools/*.bak
+
