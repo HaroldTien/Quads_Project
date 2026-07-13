@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 drone_dev/src/ArUco_detector_node/tools/generate_aruco_marker.py --id 0 --size 600 --out drone_dev_sim/model/landing_pad/materials/textures/aruco_5x5_250_id0.png)",
+      "Bash(python3 -m py_compile drone_dev/src/ArUco_detector_node/ArUco_detector_node/aruco_detector_node.py drone_dev_sim/landing_logic_sim/landing_controller_node/launch/sim.launch.py drone_dev_sim/landing_logic_sim/landing_controller_node/setup.py)"
+    ]
+  }
+}

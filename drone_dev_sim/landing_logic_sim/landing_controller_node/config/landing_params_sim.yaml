@@ -1,0 +1,29 @@
+# Landing controller tuning — SIMULATION overrides.
+# Same as landing_params.yaml but auto_offboard is TRUE: in SITL it's safe to
+# let the node auto-switch OFFBOARD + arm. NEVER ship this to hardware.
+landing_controller_node:
+  ros__parameters:
+    # --- P-controller gains ---
+    kp_xy: 0.5
+    kp_z: 0.3
+
+    # --- Safety clamps (m/s) ---
+    max_xy: 0.4
+    max_z: 0.3
+
+    # --- State-machine thresholds (m) ---
+    center_tol: 0.10
+    land_alt: 0.20
+
+    # --- Timing ---
+    pose_timeout: 0.5
+    rate_hz: 20.0
+
+    # --- Takeoff ---
+    target_alt: 2.0
+    climb_vel: 0.5
+    alt_tol: 0.10
+    enable_takeoff: true
+
+    # --- SITL only: auto-arm + OFFBOARD. Do NOT enable on hardware. ---
+    auto_offboard: true

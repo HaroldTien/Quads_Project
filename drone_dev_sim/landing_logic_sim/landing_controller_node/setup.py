@@ -18,6 +18,14 @@ setup(
             glob('config/*.yaml')),
         (os.path.join('share', package_name, 'launch'),
             glob('launch/*.launch.py')),
+        # Install the ArUco landing-pad gz model (lives beside the qav250 model)
+        # so sim.launch.py can spawn it from the package share dir.
+        (os.path.join('share', package_name, 'models', 'landing_pad'),
+            glob('../../model/landing_pad/*.sdf')
+            + glob('../../model/landing_pad/*.config')),
+        (os.path.join('share', package_name, 'models', 'landing_pad',
+                      'materials', 'textures'),
+            glob('../../model/landing_pad/materials/textures/*.png')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

@@ -288,6 +288,59 @@ python3 drone_dev/src/ArUco_detector_node/tools/generate_aruco_marker.py \
 
 Print at the size that matches `marker_length_m` (default 20 cm).
 
+### F. Run the ArUco Precision Landing in Gazebo (SITL)
+
+End-to-end marker-based landing in simulation: a downward camera on the drone
+detects a spawned ArUco pad and the landing FSM flies takeoff → search → center
+→ descend → land. PX4 + Gazebo run first; a single ROS 2 launch brings up
+everything else.
+
+Requires (in addition to the sim build): `ros_gz_bridge`, `ros_gz_sim`, and
+`mavros`.
+
+```bash
+# Terminal 1 — PX4 + Gazebo (starts the gz server + "default" world)
+cd ~/Quads_Project/drone_dev_sim
+cmake -B build && cd build && make run_simulation
+#   (or: cd ~/PX4-Autopilot && make px4_sitl gz_qav250)
+
+# Terminal 2 — build the ROS 2 sim workspace, then launch the landing stack
+cd ~/Quads_Project/drone_dev_sim/landing_logic_sim
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch landing_controller sim.launch.py
+#   optional args: fcu_url:=..., world:=default, pad_x:=0.0, pad_y:=0.0
+```
+
+`sim.launch.py` starts MAVROS, bridges the gz camera to
+`/camera/image_raw` + `/camera/camera_info`, spawns the `landing_pad` model,
+runs `aruco_detector_node` (publishing `/aruco/pose`), and runs
+`landing_controller_node` with `config/landing_params_sim.yaml`
+(`auto_offboard: true` — SITL only).
+
+What was added for this (Tier 2):
+
+| Piece | File |
+|-------|------|
+| Downward camera sensor (`<topic>camera</topic>`, gz fills `camera_info`) | `drone_dev_sim/model/model.sdf` |
+| `/aruco/pose` publisher (marker tvec/rvec, camera optical frame) | `drone_dev/src/ArUco_detector_node/.../aruco_detector_node.py` |
+| Static ArUco landing pad (DICT_5X5_250 id 0, 0.20 m, white quiet zone) | `drone_dev_sim/model/landing_pad/` |
+| Sim launch + params | `.../landing_controller_node/launch/sim.launch.py`, `config/landing_params_sim.yaml` |
+
+Notes / caveats:
+
+- **Static pad first.** The pad is `<static>true</static>` and spawns under the
+  takeoff spot, so the FSM can close a full landing without needing platform
+  velocity estimation. For the moving-platform case, make the pad non-static and
+  add a trajectory, then wire up velocity-feedforward tracking (see the review
+  findings B5/B2) — the current controller is pure position-P and will lag a
+  moving target.
+- **gz camera topic names vary by version.** With `<topic>camera</topic>` the
+  bridge expects gz topics `/camera` and `/camera_info`; if your gz build scopes
+  them differently, check `gz topic -l` and adjust the `parameter_bridge` args.
+- **`fcu_url`** defaults to `udp://:14540@127.0.0.1:14557` (PX4 SITL onboard
+  MAVLink). Override via the launch arg if your setup differs.
+
 ## Notes
 
 - The `PX4-Autopilot/`, `build/`, `install/`, and `log/` directories are

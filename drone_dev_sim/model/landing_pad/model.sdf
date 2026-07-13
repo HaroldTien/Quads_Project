@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sdf version="1.9">
+  <!-- Static ArUco landing pad.
+       - base: 0.40 x 0.40 x 0.02 white box. The white top gives the ArUco
+         detector its quiet zone around the black marker border.
+       - marker: 0.20 x 0.20 plane on top, textured with DICT_5X5_250 id 0.
+         0.20 m MUST match marker_length_m in the detector / landing params.
+       Spawn it into PX4's running "default" world (see sim.launch.py); this
+       avoids editing PX4's world files. Give <static>false</static> and a
+       velocity/trajectory plugin later for the moving-platform case. -->
+  <model name="landing_pad">
+    <static>true</static>
+    <link name="base_link">
+      <pose>0 0 0 0 0 0</pose>
+
+      <collision name="base_collision">
+        <geometry>
+          <box>
+            <size>0.40 0.40 0.02</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- White base (quiet zone) -->
+      <visual name="base_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.40 0.40 0.02</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.2 0.2 0.2 1</specular>
+        </material>
+      </visual>
+
+      <!-- ArUco marker plane, sitting just above the base top face (z=0.01). -->
+      <visual name="marker_visual">
+        <pose>0 0 0.011 0 0 0</pose>
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>0.20 0.20</size>
+          </plane>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <pbr>
+            <metal>
+              <albedo_map>materials/textures/aruco_5x5_250_id0.png</albedo_map>
+              <metalness>0.0</metalness>
+              <roughness>1.0</roughness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
