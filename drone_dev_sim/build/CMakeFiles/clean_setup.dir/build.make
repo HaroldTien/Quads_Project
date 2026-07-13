@@ -70,7 +70,9 @@ CMakeFiles/clean_setup:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Cleaning up custom files from PX4 and unregistering the airframe"
 	/usr/bin/cmake -E remove /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_s500
 	/usr/bin/cmake -E remove_directory /home/harold/Projects/Quads_Project/PX4-Autopilot/Tools/simulation/gz/models/s500
+	/usr/bin/cmake -E remove_directory /home/harold/Projects/Quads_Project/PX4-Autopilot/Tools/simulation/gz/models/aruco_landing_pad
 	bash /home/harold/Projects/Quads_Project/drone_dev_sim/tools/register_airframe.sh /home/harold/Projects/Quads_Project/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/CMakeLists.txt 4052_gz_s500 --unregister
+	bash /home/harold/Projects/Quads_Project/drone_dev_sim/tools/register_landing_pad.sh /home/harold/Projects/Quads_Project/PX4-Autopilot/Tools/simulation/gz/worlds/default.sdf --unregister
 
 clean_setup: CMakeFiles/clean_setup
 clean_setup: CMakeFiles/clean_setup.dir/build.make

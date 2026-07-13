@@ -1,5 +1,6 @@
 /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/setup_airframe.dir
 /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/setup_model.dir
+/home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/setup_landing_pad.dir
 /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/clean_px4_for_reconfig.dir
 /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/setup.dir
 /home/harold/Projects/Quads_Project/drone_dev_sim/build/CMakeFiles/build_px4.dir

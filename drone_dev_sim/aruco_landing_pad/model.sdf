@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sdf version='1.9'>
+  <model name='aruco_landing_pad'>
+    <static>true</static>
+    <link name='pad_link'>
+      <visual name='pad_visual'>
+        <geometry>
+          <box><size>0.28 0.28 0.002</size></box>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>materials/textures/aruco_5x5_50_id0.png</albedo_map>
+              <metalness>0.0</metalness>
+              <roughness>1.0</roughness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+      <collision name='pad_collision'>
+        <geometry>
+          <box><size>0.28 0.28 0.002</size></box>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

@@ -143,6 +143,19 @@ setup_model/fast:
 .PHONY : setup_model/fast
 
 #=============================================================================
+# Target rules for targets named setup_landing_pad
+
+# Build rule for target.
+setup_landing_pad: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 setup_landing_pad
+.PHONY : setup_landing_pad
+
+# fast build rule for target.
+setup_landing_pad/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/setup_landing_pad.dir/build.make CMakeFiles/setup_landing_pad.dir/build
+.PHONY : setup_landing_pad/fast
+
+#=============================================================================
 # Target rules for targets named clean_px4_for_reconfig
 
 # Build rule for target.
@@ -235,6 +248,7 @@ help:
 	@echo "... run_simulation"
 	@echo "... setup"
 	@echo "... setup_airframe"
+	@echo "... setup_landing_pad"
 	@echo "... setup_model"
 .PHONY : help
 

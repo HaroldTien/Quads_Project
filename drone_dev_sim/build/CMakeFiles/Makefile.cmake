@@ -45,6 +45,7 @@ set(CMAKE_MAKEFILE_PRODUCTS
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/setup_airframe.dir/DependInfo.cmake"
   "CMakeFiles/setup_model.dir/DependInfo.cmake"
+  "CMakeFiles/setup_landing_pad.dir/DependInfo.cmake"
   "CMakeFiles/clean_px4_for_reconfig.dir/DependInfo.cmake"
   "CMakeFiles/setup.dir/DependInfo.cmake"
   "CMakeFiles/build_px4.dir/DependInfo.cmake"

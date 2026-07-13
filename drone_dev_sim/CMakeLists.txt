@@ -38,14 +38,21 @@ set(CUSTOM_MODEL_NAME "s500")
 set(CUSTOM_AIRFRAME_SOURCE "4052_holybro_s500_sim.sh")
 set(CUSTOM_AIRFRAME_DEST "4052_gz_s500")
 
+# ArUco landing pad: a separate Gazebo model included into the world at origin
+set(LANDING_PAD_DIR "${DRONE_DEV_DIR}/aruco_landing_pad")
+set(LANDING_PAD_NAME "aruco_landing_pad")
+
 # PX4 paths
 set(PX4_AIRFRAME_DIR "${PX4_DIR}/ROMFS/px4fmu_common/init.d-posix/airframes")
 set(PX4_AIRFRAME_LIST "${PX4_AIRFRAME_DIR}/CMakeLists.txt")
 set(PX4_MODEL_DIR "${PX4_DIR}/Tools/simulation/gz/models")
 set(PX4_BUILD_DIR "${PX4_DIR}/build/px4_sitl_default")
+set(PX4_WORLD_FILE "${PX4_DIR}/Tools/simulation/gz/worlds/default.sdf")
 
 # Helper that registers the airframe name in PX4's explicit airframe list
 set(REGISTER_AIRFRAME_SCRIPT "${DRONE_DEV_DIR}/tools/register_airframe.sh")
+# Helper that includes/removes the landing pad in PX4's world file
+set(REGISTER_LANDING_PAD_SCRIPT "${DRONE_DEV_DIR}/tools/register_landing_pad.sh")
 
 # Verify custom files exist
 if(NOT EXISTS "${CUSTOM_MODEL_DIR}/model.sdf")
@@ -87,6 +94,19 @@ add_custom_target(setup_model
     VERBATIM
 )
 
+# Install the ArUco landing pad model into PX4's Gazebo models directory and
+# include it in the world at the origin. Reading a model/world is a runtime
+# operation for Gazebo, so this does NOT require a PX4 firmware rebuild.
+add_custom_target(setup_landing_pad
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PX4_MODEL_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${LANDING_PAD_DIR}"
+        "${PX4_MODEL_DIR}/${LANDING_PAD_NAME}"
+    COMMAND bash "${REGISTER_LANDING_PAD_SCRIPT}" "${PX4_WORLD_FILE}"
+    COMMENT "Installing ArUco landing pad model and including it in the world"
+    VERBATIM
+)
+
 # Clean PX4 build directory if it exists (to force reconfiguration with new airframe)
 # This ensures PX4's build system will rescan and recognize the new airframe
 # Using rm -rf which won't fail if directory doesn't exist
@@ -98,7 +118,7 @@ add_custom_target(clean_px4_for_reconfig
 
 # Combined setup target
 add_custom_target(setup
-    DEPENDS setup_airframe setup_model clean_px4_for_reconfig
+    DEPENDS setup_airframe setup_model setup_landing_pad clean_px4_for_reconfig
     COMMENT "Setting up custom model and airframe in PX4"
 )
 
@@ -148,8 +168,10 @@ add_custom_target(run_simulation
 add_custom_target(clean_setup
     COMMAND ${CMAKE_COMMAND} -E remove "${PX4_AIRFRAME_DIR}/${CUSTOM_AIRFRAME_DEST}"
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${PX4_MODEL_DIR}/${CUSTOM_MODEL_NAME}"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "${PX4_MODEL_DIR}/${LANDING_PAD_NAME}"
     COMMAND bash "${REGISTER_AIRFRAME_SCRIPT}"
         "${PX4_AIRFRAME_LIST}" "${CUSTOM_AIRFRAME_DEST}" --unregister
+    COMMAND bash "${REGISTER_LANDING_PAD_SCRIPT}" "${PX4_WORLD_FILE}" --unregister
     COMMENT "Cleaning up custom files from PX4 and unregistering the airframe"
     VERBATIM
 )
