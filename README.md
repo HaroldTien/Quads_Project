@@ -48,13 +48,16 @@ Quads_Project/
 │           ├── config/landing_params.yaml
 │           ├── package.xml / setup.py / setup.cfg
 │           └── test/test_controller.py
-├── drone_dev_sim/              # PX4 SITL (Gazebo) configuration
-│   ├── CMakeLists.txt          # Copies model+airframe into PX4 and launches SITL
+├── drone_dev_sim/              # PX4 SITL (Gazebo Harmonic) configuration
+│   ├── README.md               # SITL setup, prerequisites, and CMake targets
+│   ├── CMakeLists.txt          # Installs model+airframe into PX4 and launches SITL
 │   ├── airframes/4052_holybro_s500_sim.sh    # S500 airframe for Gazebo
+│   ├── tools/register_airframe.sh            # Registers the airframe in PX4's airframe list
 │   └── model/                  # Custom Gazebo model (s500)
 │       ├── model.sdf
 │       ├── model.config
-│       └── meshes/ thumbnails/
+│       ├── meshes/             # body.dae, iris_prop_ccw.dae, iris_prop_cw.dae
+│       └── thumbnails/
 ├── landingPadDetection/        # Standalone (non-ROS) calibration + ArUco scripts
 │   ├── Camera_calibration_OV9218/  # Arducam OV9281 (global shutter, V4L2)
 │   │   ├── collectImage.py
@@ -94,13 +97,17 @@ Creates a custom Gazebo airframe `4052_gz_s500` that combines:
 A custom `s500` Gazebo model is provided. The CMake target chain
 (`setup_airframe`, `setup_model`, `clean_px4_for_reconfig`, `setup`,
 `build_px4`, `run_simulation`, `clean_setup`, `clean_px4`) copies these files
-into the correct PX4 directories and forces a reconfigure when the airframe
-list changes.
+into the correct PX4 directories, registers the airframe in PX4's airframe
+list (`tools/register_airframe.sh`, since PX4 does not glob the airframes
+directory), and forces a reconfigure when the airframe list changes.
 
 | Component | Source | Destination in PX4 |
 |-----------|--------|--------------------|
 | Airframe | `drone_dev_sim/airframes/4052_holybro_s500_sim.sh` | `PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/4052_gz_s500` |
 | Model    | `drone_dev_sim/model/` | `PX4-Autopilot/Tools/simulation/gz/models/s500/` |
+| Airframe registration | `drone_dev_sim/tools/register_airframe.sh` | `PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/CMakeLists.txt` (edited in place) |
+
+See `drone_dev_sim/README.md` for SITL prerequisites and per-target details.
 
 #### Naming convention
 

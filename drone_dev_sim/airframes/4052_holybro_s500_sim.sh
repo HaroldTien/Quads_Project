@@ -19,6 +19,13 @@ PX4_SIM_MODEL=${PX4_SIM_MODEL:=s500}
 
 param set-default SIM_GZ_EN 1
 
+# Enable simulated sensors (gz_bridge supplies IMU/baro; PX4 sim modules supply
+# GPS and magnetometer). Without SENS_EN_MAGSIM the compass is missing and
+# preflight fails with "Compass Sensor 0 missing".
+param set-default SENS_EN_GPSSIM 1
+param set-default SENS_EN_BAROSIM 0
+param set-default SENS_EN_MAGSIM 1
+
 # Commander Parameters
 param set-default COM_DISARM_LAND 0.5
 
@@ -92,7 +99,10 @@ param set-default CP_GO_NO_DATA 1
 
 # Navigator Parameters
 param set-default NAV_ACC_RAD 2
-param set-default NAV_DLL_ACT 2
+# GCS datalink-loss failsafe disabled: this airframe is SITL-only and a GCS
+# requirement (NAV_DLL_ACT 2, as on the real drone) blocks arming when no
+# QGroundControl is running.
+param set-default NAV_DLL_ACT 0
 
 # RTL Parameters
 param set-default RTL_DESCEND_ALT 5
