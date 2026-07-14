@@ -1,5 +1,35 @@
+# External source (checked out separately)
 PX4-Autopilot/
 
-# Generated ROS2 / colcon build output
+# Generated ROS2 / colcon output
 build/
+install/
 log/
+
+# ROS runtime artifacts
+.ros/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# CMake / C build artifacts
+*.o
+*.so
+*.a
+CMakeCache.txt
+CMakeFiles/
+
+# Editor / OS cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
