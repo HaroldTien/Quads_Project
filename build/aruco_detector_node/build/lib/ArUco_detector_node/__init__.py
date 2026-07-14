@@ -1,1 +1,0 @@
-"""ArUco detector ROS 2 Python package."""
