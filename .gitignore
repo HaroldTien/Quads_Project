@@ -2,3 +2,4 @@ PX4-Autopilot/
 
 # Generated ROS2 / colcon build output
 build/
+log/
