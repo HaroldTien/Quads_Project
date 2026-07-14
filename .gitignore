@@ -33,3 +33,6 @@ CMakeFiles/
 Thumbs.db
 *.swp
 *~
+
+# Editor config
+.vscode/
