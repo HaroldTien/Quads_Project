@@ -16,6 +16,7 @@ building the firmware, and launching the simulation — all from a single comman
 | `aruco_landing_pad/` | ArUco landing-pad model (DICT_5X5_50, ID 0), included in the world at the origin |
 | `tools/register_airframe.sh` | Registers the airframe in PX4's airframe list |
 | `tools/register_landing_pad.sh` | Includes/removes the landing pad in PX4's world file |
+| `tools/run_sim_stack.sh` | One-command launcher for the whole stack (tmux) |
 | `CMakeLists.txt` | Build/install/run targets |
 
 PX4-Autopilot is expected to live at `~/Projects/Quads_Project/PX4-Autopilot`
@@ -71,12 +72,39 @@ The `run_simulation` target does everything in one shot:
 
 ---
 
-## Quick Start — full ArUco landing test (copy-paste)
+## Quick Start — full ArUco landing test
 
-The complete verified sequence for an autonomous vision landing. **One terminal
-per block, in this order** (the sim must be up before MAVROS, or MAVROS spams
-`Time jump detected`). Leave the drone on the ground — the controller does its
-own takeoff.
+### Option A — one command (recommended)
+
+Launches the entire stack (sim + MAVROS + camera bridge + detector +
+controller) in a single tmux window with 5 labeled panes, waiting for the sim
+to boot before starting the ROS side:
+
+```bash
+~/Projects/Quads_Project/drone_dev_sim/tools/run_sim_stack.sh
+```
+
+- Requires `tmux` (`sudo apt install tmux`). Without it, the script falls back
+  to opening 5 separate `gnome-terminal` windows.
+- Re-attach:  `tmux attach -t s500sim`
+- Detach (leave running):  `Ctrl-b d`
+- Stop everything:  `tmux kill-session -t s500sim`
+
+The script also handles the common failure modes automatically: it strips
+anaconda from `PATH` in every pane (anaconda's protoc breaks the PX4 gz build),
+kills orphaned `gz`/`px4` processes from previous runs (a stale gz server stops
+the Gazebo GUI from opening), and delays the controller until the MAVROS link
+is up and the EKF has settled (an early one-shot arm request would be rejected).
+
+The `pxh>` shell stays interactive in its pane. The controller runs with
+`auto_offboard:=true`, so the drone takes off, centers on the pad, and lands on
+its own.
+
+### Option B — five terminals (manual, copy-paste)
+
+The same sequence by hand, one terminal per block, **in this order** (the sim
+must be up before MAVROS, or MAVROS spams `Time jump detected`). Leave the drone
+on the ground — the controller does its own takeoff.
 
 **Terminal 1 — simulation (PX4 + Gazebo):**
 
