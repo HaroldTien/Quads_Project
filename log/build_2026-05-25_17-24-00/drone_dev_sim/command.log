@@ -1,2 +1,0 @@
-Invoking command in '/home/harold/Workspace/Quads_Project/build/drone_dev_sim': /usr/bin/cmake /home/harold/Workspace/Quads_Project/drone_dev_sim -DCMAKE_INSTALL_PREFIX=/home/harold/Workspace/Quads_Project/install/drone_dev_sim
-Invoked command in '/home/harold/Workspace/Quads_Project/build/drone_dev_sim' returned '1': /usr/bin/cmake /home/harold/Workspace/Quads_Project/drone_dev_sim -DCMAKE_INSTALL_PREFIX=/home/harold/Workspace/Quads_Project/install/drone_dev_sim

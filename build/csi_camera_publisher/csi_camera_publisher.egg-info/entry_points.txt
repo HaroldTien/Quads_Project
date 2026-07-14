@@ -1,3 +1,0 @@
-[console_scripts]
-csi_camera_node = csi_camera_publisher.csi_camera_node:main
-
