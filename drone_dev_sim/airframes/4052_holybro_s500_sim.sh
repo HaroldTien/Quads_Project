@@ -99,7 +99,10 @@ param set-default CP_GO_NO_DATA 1
 
 # Navigator Parameters
 param set-default NAV_ACC_RAD 2
-param set-default NAV_DLL_ACT 2
+# GCS datalink-loss failsafe disabled: this airframe is SITL-only and a GCS
+# requirement (NAV_DLL_ACT 2, as on the real drone) blocks arming when no
+# QGroundControl is running.
+param set-default NAV_DLL_ACT 0
 
 # RTL Parameters
 param set-default RTL_DESCEND_ALT 5

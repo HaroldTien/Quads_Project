@@ -5,8 +5,9 @@ from rclpy.node import Node
 import numpy as np
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CameraInfo, Image
+from geometry_msgs.msg import PoseStamped
 
-from .aruco_detector import ArucoDetector
+from .aruco_detector import ArucoDetector, rvec_to_quaternion
 
 
 class ArucoDetectorNode(Node):
@@ -75,6 +76,10 @@ class ArucoDetectorNode(Node):
             10,
         )
 
+        # Publish the estimated marker pose (in the camera optical frame). The
+        # landing controller subscribes to /aruco/pose to steer toward the pad.
+        self.pose_pub = self.create_publisher(PoseStamped, "/aruco/pose", 10)
+
     def camera_info_callback(self, msg: CameraInfo) -> None:
         # K is 3x3 flattened in row-major order.
         self.camera_matrix = np.array(msg.k, dtype=np.float64).reshape(3, 3)
@@ -104,8 +109,29 @@ class ArucoDetectorNode(Node):
             return
 
         ids_list = result["ids"].flatten().tolist()
-        first_tvec = result["tvecs"][0].flatten().tolist()
-        self.get_logger().info(f"Detected IDs: {ids_list} | first marker tvec(m): {first_tvec}")
+
+        # Build a PoseStamped for the first (target) marker and publish it.
+        # tvec = marker position (m) in the camera optical frame; rvec = its
+        # orientation as a Rodrigues vector, converted to a quaternion.
+        tvec = np.asarray(result["tvecs"][0], dtype=np.float64).flatten()
+        rvec = np.asarray(result["rvecs"][0], dtype=np.float64).flatten()
+        qx, qy, qz, qw = rvec_to_quaternion(rvec)
+
+        pose = PoseStamped()
+        pose.header.stamp = msg.header.stamp          # time-align with the source image
+        pose.header.frame_id = "camera_optical"       # matches the camera_info frame
+        pose.pose.position.x = float(tvec[0])
+        pose.pose.position.y = float(tvec[1])
+        pose.pose.position.z = float(tvec[2])
+        pose.pose.orientation.x = qx
+        pose.pose.orientation.y = qy
+        pose.pose.orientation.z = qz
+        pose.pose.orientation.w = qw
+        self.pose_pub.publish(pose)
+
+        self.get_logger().info(
+            f"Detected IDs: {ids_list} | published /aruco/pose tvec(m): {tvec.tolist()}"
+        )
 
 
 
@@ -123,7 +149,10 @@ def main(args=None) -> None:
         node.get_logger().info("Shutting down ArUco detector node")
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        # On Ctrl+C, ros2 run may have already shut the context down; calling
+        # shutdown twice raises RCLError, so guard it.
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
