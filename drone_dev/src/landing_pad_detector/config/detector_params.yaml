@@ -1,0 +1,26 @@
+landing_pad_detector:
+  ros__parameters:
+    # --- Topics / plumbing ---
+    image_topic: camera/image_raw
+    camera_info_topic: camera/camera_info
+    landing_target_topic: /mavros/landing_target/pose
+    landing_pad_id: 0
+    target_frame: base_link        # drone body frame to send the target in
+    transform_to_body: true        # needs a base_link->camera_optical TF (see launch)
+    print_pose_every_n: 30
+
+    # --- Marker / detection (mirrors detector_lib.DetectorConfig) ---
+    marker_size_meters: 0.20
+    aruco_dict_name: DICT_5X5_50
+    clahe_clip_limit: 1.5
+    detect_scale: 0.5              # detect at half-res — matters on the Nano
+    fallback_every_n: 3
+    min_marker_perimeter_rate: 0.05
+    error_correction_rate: 0.5
+    max_reproj_error_px: 4.0
+
+    # --- Temporal pose filter ---
+    pose_smooth_alpha: 0.3
+    pose_outlier_threshold_pos: 0.15
+    pose_outlier_threshold_rot: 0.5
+    pose_max_consecutive_rejects: 5
