@@ -184,12 +184,6 @@ produce a printable marker image (note: the tool generates from
 `DICT_5X5_250`; IDs 0–49 also exist in `DICT_5X5_50`, but regenerate with the
 matching dictionary if in doubt).
 
-> ⚠️ The landing controller subscribes to `/aruco/pose`
-> (`geometry_msgs/PoseStamped`), but the current revision of
-> `aruco_detector_publisher.py` only logs detections — the pose-publishing
-> code from the earlier revision was dropped when the low-light pipeline was
-> ported in. Until it is restored, the full takeoff→land loop will sit in
-> SEARCH.
 
 #### `landing_controller` (`src/landing_controller_node/`)
 
