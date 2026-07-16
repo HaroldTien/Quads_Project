@@ -4,7 +4,7 @@ from glob import glob
 from setuptools import setup
 
 package_name = "aruco_detector_node"
-python_module_name = "ArUco_detector_node"
+python_module_name = "aruco_detector_node"
 
 setup(
     name=package_name,
@@ -24,7 +24,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "aruco_detector_node = ArUco_detector_node.aruco_detector_publisher:main",
+            "aruco_detector_node = aruco_detector_node.aruco_detector_publisher:main",
+            "aruco_viewer = aruco_detector_node.aruco_viewer:main",
         ],
     },
 )

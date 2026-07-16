@@ -57,6 +57,7 @@ class ArucoDetector:
         denoise_diameter: int = 5,
         denoise_sigma_color: float = 50.0,
         denoise_sigma_space: float = 50.0,
+        raw_fallback_interval: int = 3,
     ) -> None:
         # Physical marker size in meters (used by pose estimation).
         self.marker_length_m = marker_length_m
@@ -68,13 +69,15 @@ class ArucoDetector:
         self.dictionary = cv2.aruco.getPredefinedDictionary(dictionary_id)
 
         # Configure detector behavior tuned for low-light / uneven lighting:
-        #  - Wide adaptive-threshold window range handles patchy shadows & glare.
+        #  - Adaptive-threshold windows 3/13/23: three passes cover patchy
+        #    shadows & glare; going to 53 (six passes) doubled detect cost and
+        #    blew the 33 ms frame budget on the Jetson.
         #  - Moderate perimeter/error-correction rates stay permissive for dim
         #    markers without admitting noisy/false reads.
         #  - Subpixel corner refinement for accurate corner locations.
         self.parameters = cv2.aruco.DetectorParameters()
         self.parameters.adaptiveThreshWinSizeMin = 3
-        self.parameters.adaptiveThreshWinSizeMax = 53
+        self.parameters.adaptiveThreshWinSizeMax = 23
         self.parameters.adaptiveThreshWinSizeStep = 10
         self.parameters.adaptiveThreshConstant = 7
         self.parameters.minMarkerPerimeterRate = 0.05
@@ -98,6 +101,12 @@ class ArucoDetector:
         self.denoise_diameter = denoise_diameter
         self.denoise_sigma_color = denoise_sigma_color
         self.denoise_sigma_space = denoise_sigma_space
+
+        # The raw-gray fallback pass doubles detect cost exactly when nothing is
+        # in view, so only run it every Nth missed frame. 1 = every frame
+        # (old behaviour), 0 = never.
+        self.raw_fallback_interval = max(0, int(raw_fallback_interval))
+        self._missed_frames = 0
 
         # OpenCV has two APIs depending on version. Keep both for compatibility.
         self.use_modern_api = hasattr(cv2.aruco, "ArucoDetector")
@@ -136,6 +145,9 @@ class ArucoDetector:
           Pass 1 ("enhanced"): CLAHE (+ denoise) image — best for low light/shadows.
           Pass 2 ("raw"):      original grayscale — recovers markers that aggressive
                                CLAHE/denoise washed out (e.g. strong/over-exposed light).
+        Pass 2 is throttled to every raw_fallback_interval-th missed frame: running
+        both passes on every empty frame doubled the per-frame cost precisely when
+        the marker was out of view, dropping the whole pipeline below camera rate.
 
         We feed grayscale (not pre-binarised) images: detectMarkers runs its own
         multi-window adaptive thresholding, so pre-thresholding is redundant.
@@ -146,7 +158,16 @@ class ArucoDetector:
             enhanced = self._preprocess(gray)
             corners, ids = self._detect_markers(enhanced)
             if ids is not None and len(ids) > 0:
+                self._missed_frames = 0
                 return corners, ids
+
+            self._missed_frames += 1
+            run_fallback = (
+                self.raw_fallback_interval > 0
+                and self._missed_frames % self.raw_fallback_interval == 0
+            )
+            if not run_fallback:
+                return [], None
 
         # Fallback (or the only pass when preprocessing is disabled): raw gray.
         corners, ids = self._detect_markers(gray)

@@ -2,6 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, qos_profile_sensor_data
 import cv2
 import numpy as np
 from cv_bridge import CvBridge
@@ -32,6 +33,9 @@ class ArucoDetectorNode(Node):
         self.declare_parameter("denoise_diameter", 5)
         self.declare_parameter("denoise_sigma_color", 50.0)
         self.declare_parameter("denoise_sigma_space", 50.0)
+        # Run the raw-gray fallback detect pass only every Nth missed frame
+        # (1 = every frame, 0 = never); see ArucoDetector.detect.
+        self.declare_parameter("raw_fallback_interval", 3)
 
         # Temporal pose smoothing / outlier rejection (feeds landing_controller).
         self.declare_parameter("enable_pose_filter", True)
@@ -46,6 +50,11 @@ class ArucoDetectorNode(Node):
         # Debug view: republish the frame with detected markers + pose axes drawn,
         # so you can watch the stream in rqt_image_view. Turn off to save CPU.
         self.declare_parameter("publish_debug_image", True)
+        # Debug frames are downscaled to this width before publishing. A full
+        # 1280x800 bgr8 frame is ~3 MB -> ~47 UDP fragments per message; with
+        # best-effort QoS one lost fragment discards the whole frame, which is
+        # what froze the viewer. 640 wide is ~0.77 MB. Set 0 to publish full-res.
+        self.declare_parameter("debug_image_width", 640)
 
         marker_length_m = float(self.get_parameter("marker_length_m").value)
         dictionary_name = str(self.get_parameter("dictionary_name").value)
@@ -65,6 +74,7 @@ class ArucoDetectorNode(Node):
             denoise_diameter=int(self.get_parameter("denoise_diameter").value),
             denoise_sigma_color=float(self.get_parameter("denoise_sigma_color").value),
             denoise_sigma_space=float(self.get_parameter("denoise_sigma_space").value),
+            raw_fallback_interval=int(self.get_parameter("raw_fallback_interval").value),
         )
         self.get_logger().info(
             "ArUco settings: dictionary=%s marker_length_m=%.3f target_marker_id=%d"
@@ -90,8 +100,9 @@ class ArucoDetectorNode(Node):
         # Debug image publisher — view with: ros2 run rqt_image_view rqt_image_view
         # and pick /aruco/debug_image.
         self.publish_debug_image = bool(self.get_parameter("publish_debug_image").value)
+        self.debug_image_width = int(self.get_parameter("debug_image_width").value)
         self.debug_pub = (
-            self.create_publisher(Image, "/aruco/debug_image", 10)
+            self.create_publisher(Image, "/aruco/debug_image", qos_profile_sensor_data)
             if self.publish_debug_image else None
         )
 
@@ -100,12 +111,19 @@ class ArucoDetectorNode(Node):
         self.dist_coeffs = None
         self.has_logged_missing_calib = False
 
-        # Subscribe to raw camera image stream.
+        # Subscribe to raw camera image stream. Depth 1 (not sensor_data's 5):
+        # detection can run slower than the camera, and a deeper queue just
+        # makes us process a backlog of stale frames instead of the newest one.
+        image_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
         self.image_sub = self.create_subscription(
             Image,
             "/camera/image_raw",
             self.image_callback,
-            10,
+            image_qos,
         )
 
         # Subscribe to camera calibration information.
@@ -113,7 +131,7 @@ class ArucoDetectorNode(Node):
             CameraInfo,
             "/camera/camera_info",
             self.camera_info_callback,
-            10,
+            qos_profile_sensor_data,
         )
 
     def camera_info_callback(self, msg: CameraInfo) -> None:
@@ -196,6 +214,13 @@ class ArucoDetectorNode(Node):
         """Republish an annotated frame on /aruco/debug_image for rqt_image_view."""
         if self.debug_pub is None:
             return
+        if 0 < self.debug_image_width < image.shape[1]:
+            scale = self.debug_image_width / image.shape[1]
+            image = cv2.resize(
+                image,
+                (self.debug_image_width, int(round(image.shape[0] * scale))),
+                interpolation=cv2.INTER_AREA,
+            )
         debug_msg = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
         debug_msg.header = header
         self.debug_pub.publish(debug_msg)

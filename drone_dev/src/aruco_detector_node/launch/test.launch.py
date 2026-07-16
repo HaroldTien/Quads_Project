@@ -1,11 +1,13 @@
 """One-terminal test launch for the ArUco detector integration.
 
-Brings up the CSI camera publisher and the ArUco detector together so the
-detector has an image + camera_info stream to work with. Inspect the results
-from a second (sourced) terminal with:
+Brings up the CSI camera publisher, the ArUco detector, and a pop-up viewer
+window showing the annotated detection stream (/aruco/debug_image). Inspect
+the pose from a second (sourced) terminal with:
 
     ros2 topic echo /aruco/pose
-    ros2 run rqt_image_view rqt_image_view   # pick /aruco/debug_image
+
+On a headless setup (SSH without X), disable the window with:
+    ros2 launch aruco_detector_node test.launch.py open_viewer:=false
 
 Run with:
     ros2 launch aruco_detector_node test.launch.py
@@ -13,8 +15,6 @@ Override marker settings, e.g.:
     ros2 launch aruco_detector_node test.launch.py target_marker_id:=3 marker_length_m:=0.15
 Skip the camera (already running it elsewhere):
     ros2 launch aruco_detector_node test.launch.py start_camera:=false
-Also pop open the debug image viewer:
-    ros2 launch aruco_detector_node test.launch.py open_viewer:=true
 """
 
 from launch import LaunchDescription
@@ -47,8 +47,9 @@ def generate_launch_description():
             "start_camera", default_value="true",
             description="Set false if the camera publisher is already running."),
         DeclareLaunchArgument(
-            "open_viewer", default_value="false",
-            description="Set true to also launch rqt_image_view on /aruco/debug_image."),
+            "open_viewer", default_value="true",
+            description="Pop up the ArUco viewer window on /aruco/debug_image. "
+                        "Set false on headless setups (SSH without X)."),
 
         # Camera publisher (provides /camera/image_raw + /camera/camera_info).
         IncludeLaunchDescription(
@@ -69,12 +70,11 @@ def generate_launch_description():
             }],
         ),
 
-        # Optional live debug view.
+        # Pop-up viewer window showing the annotated detection stream.
         Node(
-            package="rqt_image_view",
-            executable="rqt_image_view",
+            package="aruco_detector_node",
+            executable="aruco_viewer",
             name="aruco_debug_viewer",
-            arguments=["/aruco/debug_image"],
             output="screen",
             condition=IfCondition(open_viewer),
         ),
