@@ -34,9 +34,9 @@ Quads_Project/
 │       │   ├── data/                   # camera_matrix.npy / dist_coeffs.npy
 │       │   ├── package.xml / setup.py / setup.cfg
 │       │   └── test/                   # pep257 / flake8 / copyright linters
-│       ├── ArUco_detector_node/    # ROS 2 pkg: aruco_detector_node
-│       │   ├── ArUco_detector_node/aruco_detector_publisher.py
-│       │   ├── ArUco_detector_node/aruco_detector.py
+│       ├── aruco_detector_node/    # ROS 2 pkg: aruco_detector_node
+│       │   ├── aruco_detector_node/aruco_detector_publisher.py
+│       │   ├── aruco_detector_node/aruco_detector.py
 │       │   ├── tools/generate_aruco_marker.py
 │       │   └── package.xml / setup.py / setup.cfg
 │       └── landing_controller_node/ # ROS 2 pkg: landing_controller
@@ -153,7 +153,7 @@ Parameters (`config/camera_params.yaml`, override via launch file):
 Executable: `csi_camera_node`. Launch: `ros2 launch csi_camera_publisher
 camera.launch.py`.
 
-#### `aruco_detector_node` (`src/ArUco_detector_node/`)
+#### `aruco_detector_node` (`src/aruco_detector_node/`)
 
 Subscribes to the camera topics above and runs OpenCV ArUco detection +
 `estimatePoseSingleMarkers`, with a low-light preprocessing pipeline.
@@ -349,7 +349,7 @@ ROS 2 workspace.
 ### D. Generate a Printable ArUco Marker
 
 ```bash
-python3 drone_dev/src/ArUco_detector_node/tools/generate_aruco_marker.py \
+python3 drone_dev/src/aruco_detector_node/tools/generate_aruco_marker.py \
     --id 0 --size 600 --out aruco_id0.png
 ```
 

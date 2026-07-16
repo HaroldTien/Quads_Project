@@ -3,31 +3,28 @@
 
 import rclpy # The core ROS 2 Python library. Handles initialisation, shutdown, and the executor (the engine that keeps your node alive).
 from rclpy.node import Node # The base class for all ROS 2 nodes.
+from rclpy.qos import qos_profile_sensor_data # Best-effort QoS preset suited to high-rate sensor streams.
 from sensor_msgs.msg import Image, CameraInfo # ROS 2 messages for image and camera info.
 from cv_bridge import CvBridge # A library for converting images between ROS 2 and OpenCV.
 import cv2 # A library for computer vision.
 import numpy as np # A library for numerical computing with Python.
 from ament_index_python.packages import get_package_share_directory
 import os
+import time
 
 
 # Gstreamer pipline for the CSI camera.
 
-def gst_pipeline(device = '/dev/video0', width=1280, height=800):
-    """Build GStreamer pipeline string for OV9281 on Jetson via Tegra VI."""
+def gst_pipeline(device = '/dev/video0', width=1280, height=800, fps=30):
+    """Build GStreamer pipeline string for the mono CSI sensor on Jetson.
+    """
     return (
-        f"nvv4l2camerasrc device={device} ! "
-        f"video/x-raw(memory:NVMM), format=UYVY, width={width}, height={height} ! "
-        f"nvvidconv ! "
-        f"video/x-raw, format=BGRx ! "
-        f"videoconvert ! "
-        f"video/x-raw, format=BGR ! "
-        f"appsink drop=1 max-buffers=1 sync=false"  
+        f"v4l2src device={device} ! "
+        f"video/x-raw, format=GRAY8, width={width}, height={height}, framerate={fps}/1 ! "
+        f"appsink drop=1 max-buffers=1 sync=false"
         # Only keep 1 frame queued at a time. Prevents memory buildup if the node briefly lags.
         # Don't try to sync to a GStreamer clock. Just deliver frames as fast as the camera produces them.
     )
-
-
 
 
 class CsiCameraNode(Node):
@@ -67,20 +64,39 @@ class CsiCameraNode(Node):
         # create publisher
 
         #self.create_publisher(msg_type, topic, qos) 
-        # qos: Quality of Service depth
-        self.image_publisher = self.create_publisher(Image, 'camera/image_raw', 10)
-        self.camera_info_publisher = self.create_publisher(CameraInfo, 'camera/camera_info', 10)
-        self.bridge = CvBridge() # convert images between ROS 2 and OpenCV --  Instantiated once here and reused every frame. Creating it once is efficient — it sets up internal buffers at construction time.
+        
+        self.image_publisher = self.create_publisher(Image, 'camera/image_raw', qos_profile_sensor_data)
+        self.camera_info_publisher = self.create_publisher(CameraInfo, 'camera/camera_info', qos_profile_sensor_data)
 
-        # open camera
-        pipline = gst_pipeline(device=self.device, width=self.width, height=self.height)
-        self.cap = cv2.VideoCapture(pipline, cv2.CAP_GSTREAMER)
+        # convert images between ROS 2 and OpenCV
+        self.bridge = CvBridge()
 
-        if not self.cap.isOpened():
+        # Stall watchdog: the Jetson VI/CSI capture occasionally hits a
+        # "corr_err: discarding frame" and the V4L2 stream hangs for good.
+        # After this many consecutive failed reads, tear down and reopen the
+        # GStreamer pipeline instead of warning forever on a dead stream.
+        # 2 failures x 1s read timeout + ~0.5s reopen keeps a stall-induced
+        # freeze at ~2.5s; raise these if reopens trigger on healthy slow reads.
+        self.declare_parameter('reopen_after_failures', 2)
+        self.reopen_after_failures = self.get_parameter('reopen_after_failures').value
+        self.consecutive_failures = 0
+
+        # open camera - retry a few times rather than crash, so a transiently
+        # busy /dev/video0 (e.g. a previous node still releasing it) or a slow
+        # sensor bring-up doesn't kill the whole launch.
+        self.declare_parameter('open_retries', 5)
+        open_retries = self.get_parameter('open_retries').value
+
+        self.cap = None
+        for attempt in range(1, open_retries + 1):
+            if self._open_camera():
+                break
+            self.get_logger().warn(
+                f'{self.device} busy or unavailable, retry {attempt}/{open_retries}')
+            time.sleep(2.0)
+        else:
             self.get_logger().error('Failed to open camera -  check pipeline and /dev/video0')
             raise  RuntimeError('Failed to open camera')
-        else:        
-            self.get_logger().info(f'Camera opened: {self.width}x{self.height} @ {self.fps}fps')
 
         
         # build the camera info message
@@ -89,6 +105,29 @@ class CsiCameraNode(Node):
         # start the timer
         self.timer = self.create_timer(1.0/self.fps, self.timer_callback)
         self.get_logger().info('CSI camera node initialised')
+
+    def _open_camera(self) -> bool:
+        """(Re)open the GStreamer capture. Returns True when the camera is up."""
+        if self.cap is not None:
+            self.cap.release()
+
+        pipline = gst_pipeline(device=self.device, width=self.width, height=self.height, fps=self.fps)
+        self.cap = cv2.VideoCapture(pipline, cv2.CAP_GSTREAMER)
+
+        # Keep OpenCV from promoting the single-channel GRAY8 buffer to 3-channel BGR.
+        self.cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)
+
+        # Fail a stalled read after 1s instead of OpenCV's default 30s, so the
+        # watchdog can reopen the pipeline quickly (and the executor is not
+        # blocked for 30s per dead read).
+        self.cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 1000)
+
+        if not self.cap.isOpened():
+            return False
+
+        self.consecutive_failures = 0
+        self.get_logger().info(f'Camera opened: {self.width}x{self.height} @ {self.fps}fps')
+        return True
 
     def build_camera_info(self, width, height):
         # build camera info message from loaded calibration matrix
@@ -121,19 +160,27 @@ class CsiCameraNode(Node):
             0.0, K[1,1], K[1,2], 0.0,
             0.0, 0.0, 1.0, 0.0
         ]
-        
+         
         return msg
     
     def timer_callback(self):
         ret, frame = self.cap.read()
         if not ret:
-            self.get_logger().warn('Failed to grab frame')
-            return # skip this frame and try again so no error is raised
-            
+            self.consecutive_failures += 1
+            self.get_logger().warn(
+                f'Failed to grab frame ({self.consecutive_failures} in a row)')
+            if self.consecutive_failures >= self.reopen_after_failures:
+                self.get_logger().warn('Camera stream stalled - reopening pipeline')
+                if not self._open_camera():
+                    self.get_logger().error('Camera reopen failed, will retry')
+            return
+
+        self.consecutive_failures = 0
+
         #single timestamp shared by two messages
         now = self.get_clock().now().to_msg()
 
-        image_msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8')
+        image_msg = self.bridge.cv2_to_imgmsg(frame, encoding='mono8')
         image_msg.header.stamp = now
         image_msg.header.frame_id = 'camera_optical'
         self.image_publisher.publish(image_msg)
@@ -155,7 +202,9 @@ def main(args=None):
         node.get_logger().info('Shutting down — Ctrl+C received')
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        # try_shutdown: launch's SIGINT handling may have shut the context down
+        # already; plain shutdown() then raises "rcl_shutdown already called".
+        rclpy.try_shutdown()
 
 if __name__ == '__main__':
     main()
