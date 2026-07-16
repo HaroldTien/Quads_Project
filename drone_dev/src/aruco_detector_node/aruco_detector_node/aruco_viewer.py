@@ -89,7 +89,9 @@ def main(args=None) -> None:
     finally:
         node.destroy_node()
         cv2.destroyAllWindows()
-        rclpy.shutdown()
+        # try_shutdown: launch's SIGINT handling may have shut the context down
+        # already; plain shutdown() then raises "rcl_shutdown already called".
+        rclpy.try_shutdown()
 
 
 if __name__ == "__main__":

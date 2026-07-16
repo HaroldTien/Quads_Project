@@ -68,13 +68,6 @@ class ArucoDetector:
         dictionary_id = getattr(cv2.aruco, dictionary_name)
         self.dictionary = cv2.aruco.getPredefinedDictionary(dictionary_id)
 
-        # Configure detector behavior tuned for low-light / uneven lighting:
-        #  - Adaptive-threshold windows 3/13/23: three passes cover patchy
-        #    shadows & glare; going to 53 (six passes) doubled detect cost and
-        #    blew the 33 ms frame budget on the Jetson.
-        #  - Moderate perimeter/error-correction rates stay permissive for dim
-        #    markers without admitting noisy/false reads.
-        #  - Subpixel corner refinement for accurate corner locations.
         self.parameters = cv2.aruco.DetectorParameters()
         self.parameters.adaptiveThreshWinSizeMin = 3
         self.parameters.adaptiveThreshWinSizeMax = 23

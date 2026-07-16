@@ -10,6 +10,7 @@ import cv2 # A library for computer vision.
 import numpy as np # A library for numerical computing with Python.
 from ament_index_python.packages import get_package_share_directory
 import os
+import time
 
 
 # Gstreamer pipline for the CSI camera.
@@ -74,13 +75,26 @@ class CsiCameraNode(Node):
         # "corr_err: discarding frame" and the V4L2 stream hangs for good.
         # After this many consecutive failed reads, tear down and reopen the
         # GStreamer pipeline instead of warning forever on a dead stream.
-        self.declare_parameter('reopen_after_failures', 3)
+        # 2 failures x 1s read timeout + ~0.5s reopen keeps a stall-induced
+        # freeze at ~2.5s; raise these if reopens trigger on healthy slow reads.
+        self.declare_parameter('reopen_after_failures', 2)
         self.reopen_after_failures = self.get_parameter('reopen_after_failures').value
         self.consecutive_failures = 0
 
-        # open camera
+        # open camera - retry a few times rather than crash, so a transiently
+        # busy /dev/video0 (e.g. a previous node still releasing it) or a slow
+        # sensor bring-up doesn't kill the whole launch.
+        self.declare_parameter('open_retries', 5)
+        open_retries = self.get_parameter('open_retries').value
+
         self.cap = None
-        if not self._open_camera():
+        for attempt in range(1, open_retries + 1):
+            if self._open_camera():
+                break
+            self.get_logger().warn(
+                f'{self.device} busy or unavailable, retry {attempt}/{open_retries}')
+            time.sleep(2.0)
+        else:
             self.get_logger().error('Failed to open camera -  check pipeline and /dev/video0')
             raise  RuntimeError('Failed to open camera')
 
@@ -103,10 +117,10 @@ class CsiCameraNode(Node):
         # Keep OpenCV from promoting the single-channel GRAY8 buffer to 3-channel BGR.
         self.cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)
 
-        # Fail a stalled read after 2s instead of OpenCV's default 30s, so the
+        # Fail a stalled read after 1s instead of OpenCV's default 30s, so the
         # watchdog can reopen the pipeline quickly (and the executor is not
         # blocked for 30s per dead read).
-        self.cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 2000)
+        self.cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 1000)
 
         if not self.cap.isOpened():
             return False
@@ -188,7 +202,9 @@ def main(args=None):
         node.get_logger().info('Shutting down — Ctrl+C received')
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        # try_shutdown: launch's SIGINT handling may have shut the context down
+        # already; plain shutdown() then raises "rcl_shutdown already called".
+        rclpy.try_shutdown()
 
 if __name__ == '__main__':
     main()
